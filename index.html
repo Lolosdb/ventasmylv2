@@ -5,41 +5,259 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./logo_myl.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="apple-mobile-web-app-title" content="Ventas M&L" />
     <title>Gestión de Ventas</title>
 
     <script type="module" crossorigin src="./index-NVVWiGcP.js"></script>
     <link rel="stylesheet" href="./index-cqvvk0bb.css?v=final">
     <link rel="manifest" href="./manifest.webmanifest">
 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <style>
-        /* --- ESTILOS QUIRÚRGICOS --- */
-
-        /* 1. Contador de pedidos (Limpio y profesional) */
-        /* 1. Contador de pedidos (ELIMINADO POR PETICION) */
-
-        /* 2. Arreglo Símbolo Euro en Menú */
-        .euro-menu-fix {
-            font-size: 24px !important;
-            display: inline-block;
-            line-height: 1;
-            transform: translateY(1px);
+        /* --- ESTILOS GENERALES --- */
+        body {
+            margin: 0;
+            background-color: #1e293b;
+            font-family: sans-serif;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            padding-bottom: 120px !important;
         }
 
-        /* 3. Textos Ventas (Anteriormente Anual) */
+        .leaflet-container:not(#mi-mapa-real) {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            z-index: 0 !important;
+        }
+
         .texto-ventas {
             text-transform: uppercase !important;
             font-weight: 700 !important;
             color: #ffffff !important;
         }
 
-        /* 4. Fechas (Ficha Cliente) */
-        .fecha-espanol {
-            font-size: 11px !important;
-            font-weight: 700 !important;
-            color: #94a3b8 !important;
-            margin-bottom: 2px !important;
-            display: block !important;
+        /* VISOR MAPA */
+        #visor-mapa {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1e293b;
+            z-index: 10000;
+        }
+
+        #mi-mapa-real {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* BOTONES MAPA */
+        .btn-mapa {
+            position: absolute;
+            top: 20px;
+            background: white;
+            color: #333;
+            padding: 8px 16px;
+            border-radius: 30px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid #ccc;
+        }
+
+        #btn-salir {
+            left: 15px;
+        }
+
+        #btn-opciones {
+            right: 15px;
+            background: #2563eb;
+            color: white;
+            border: none;
+        }
+
+        /* PANEL IMPORTAR */
+        #panel-importar {
+            position: absolute;
+            top: 65px;
+            right: 15px;
+            width: 280px;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.4);
+            z-index: 10002;
+            transform: translateX(130%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        #panel-importar.activo {
+            transform: translateX(0);
+        }
+
+        /* BOTONES */
+        .btn-accion {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-verde {
+            background: #16a34a;
+            color: white;
+        }
+
+        .btn-rojo {
+            background: #fee2e2;
+            color: #ef4444;
+            border: 1px solid #fca5a5;
+        }
+
+        .btn-naranja {
+            background: #f97316;
+            color: white;
+            border: 1px solid #ea580c;
+        }
+
+        /* BOTÓN REPARAR */
+        #btn-reparar-inyectado {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            background: #f97316;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            text-transform: uppercase;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* LÁPIZ FLOTANTE */
+        #btn-editar-flotante {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: #2563eb;
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 99999;
+            border: 2px solid white;
+        }
+
+        #btn-editar-flotante:active {
+            transform: scale(0.9);
+        }
+
+        /* MODAL EDITOR */
+        #modal-editor {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100000;
+            overflow-y: auto;
+        }
+
+        .editor-content {
+            background: white;
+            width: 90%;
+            max-width: 400px;
+            margin: 40px auto;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        .coord-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn-gps {
+            background: #0ea5e9;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 0 15px;
+            height: 38px;
+            font-weight: bold;
+            cursor: pointer;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+        }
+
+        .btn-gps:active {
+            background: #0284c7;
+        }
+
+        #input-excel {
+            display: none;
+        }
+
+        nav,
+        div[style*="bottom: 0"],
+        div[class*="bottom"] {
+            z-index: 9999 !important;
+            position: fixed !important;
         }
     </style>
 </head>
@@ -47,232 +265,74 @@
 <body>
     <div id="root"></div>
 
-    <script>
-        // ==========================================
-        // ==========================================
-        // 1. CÁLCULO DE PEDIDOS (ELIMINADO)
-        // ==========================================
-        function contarPedidos() {
-            // Función eliminada para limpiar la UI
-            return {};
-        }
+    <!-- BOTÓN EDICIÓN RÁPIDA (Manejado por ui-fixes.js) -->
+    <!-- Se inyectará dinámicamente si es necesario, pero lo dejamos aquí como fallback/estructura -->
+    <!-- <div id="btn-editar-flotante" onclick="abrirEditor()">✏️</div> -->
+    <!-- El script ui-fixes.js crea este botón si no existe, o podemos dejarlo aquí oculto -->
 
-        // ==========================================
-        // 2. EL ARREGLADOR VISUAL (Intervalo)
-        // ==========================================
-        setInterval(() => {
+    <!-- MODAL EDITOR (Manejado por data-manager.js) -->
+    <div id="modal-editor">
+        <div class="editor-content">
+            <h3 style="margin:0 0 15px 0; color:#1e293b;">Editar Cliente</h3>
 
-            // --- A. MENÚ INFERIOR (ESTRATEGIA SEGURA) ---
-            // 1. Buscamos el texto "Dash"
-            const dashSpans = Array.from(document.querySelectorAll('span, p, div')).filter(e => e.textContent.trim() === 'Dash');
-            let barraMenu = null;
+            <input type="hidden" id="edit-id">
 
-            // 2. Identificamos cuál es el del menú de abajo (por posición)
-            for (const span of dashSpans) {
-                const rect = span.getBoundingClientRect();
-                // Si está en los últimos 100px de la pantalla, ES EL MENÚ
-                if (rect.top > window.innerHeight - 100) {
-                    // Buscamos el contenedor padre (la barra entera)
-                    // Subimos 2 o 3 niveles hasta encontrar el contenedor flex
-                    let candidato = span.parentElement;
-                    for (let k = 0; k < 3; k++) {
-                        if (candidato && candidato.parentElement) {
-                            // Si el padre tiene varios hijos (botones), es la barra
-                            if (candidato.parentElement.children.length > 4) {
-                                barraMenu = candidato.parentElement;
-                                break;
-                            }
-                        }
-                        candidato = candidato ? candidato.parentElement : null;
-                    }
-                }
-                if (barraMenu) break;
-            }
+            <div class="form-group">
+                <label class="form-label">NOMBRE</label>
+                <input type="text" id="edit-name" class="form-input">
+            </div>
 
-            // 3. Si encontramos la barra, aplicamos estilos SOLO A SUS HIJOS
-            if (barraMenu) {
-                Array.from(barraMenu.children).forEach(boton => {
-                    // Limpieza base
-                    boton.style.backgroundColor = 'transparent';
-                    boton.style.boxShadow = 'none';
-                    boton.style.border = 'none';
+            <div class="form-group">
+                <label class="form-label">DIRECCIÓN</label>
+                <input type="text" id="edit-address" class="form-input">
+            </div>
 
-                    // Color blanco a textos e iconos
-                    const hijos = boton.querySelectorAll('*');
-                    hijos.forEach(hijo => {
-                        // Texto blanco
-                        if (hijo.tagName !== 'SVG' && hijo.tagName !== 'IMG') {
-                            hijo.style.color = '#ffffff';
-                        }
-                        // Arreglo especial Euro
-                        if (hijo.textContent.includes('€') && !hijo.classList.contains('euro-menu-fix')) {
-                            hijo.classList.add('euro-menu-fix');
-                        }
-                    });
+            <div class="form-group">
+                <label class="form-label">TELÉFONO</label>
+                <input type="text" id="edit-phone" class="form-input">
+            </div>
 
-                    // Iconos SVG -> Blanco
-                    const iconos = boton.querySelectorAll('svg, img');
-                    iconos.forEach(ico => ico.style.filter = 'brightness(0) invert(1)');
+            <div class="form-group">
+                <label class="form-label">EMAIL</label>
+                <input type="text" id="edit-email" class="form-input">
+            </div>
 
-                    // Borde activo (si tiene fondo azul o clase active)
-                    const estilo = window.getComputedStyle(boton);
-                    if (boton.className.includes('active') || estilo.backgroundColor.includes('235') || location.href.includes(boton.textContent.trim().toLowerCase())) {
-                        boton.style.borderBottom = '3px solid white';
-                        boton.style.paddingBottom = '4px';
-                    } else {
-                        boton.style.borderBottom = 'none';
-                    }
-                });
-            }
+            <div class="form-group">
+                <label class="form-label">NOTAS</label>
+                <textarea id="edit-notes" class="form-input" rows="3"></textarea>
+            </div>
 
-            // --- B. CONTADORES DE PEDIDOS (ELIMINADO) ---
-            // Se ha eliminado la lógica de inyección de contadores por petición del usuario.
-            const contadores = {}; // Placeholder vacío
+            <div class="form-group">
+                <label class="form-label">UBICACIÓN GPS</label>
+                <div class="coord-row">
+                    <input type="number" id="edit-lat" class="form-input" placeholder="Latitud">
+                    <input type="number" id="edit-lon" class="form-input" placeholder="Longitud">
+                    <button class="btn-gps" onclick="capturarGPSPropio()">📍 GPS AQUÍ</button>
+                </div>
+            </div>
 
-            // --- C. TEXTOS GENERALES ---
-            document.querySelectorAll('*').forEach(el => {
-                if (el.children.length === 0 && el.textContent.trim()) {
-                    const t = el.textContent.trim().toUpperCase();
-                    // Reemplazo de ANUAL/HISTÓRICO por VENTAS
-                    if (t.includes("ANUAL") || t.includes("HISTÓRICO") || t.includes("HISTORICO")) {
-                        // Evitar bucles infinitos si ya se cambió
-                        if (!el.dataset.replaced) {
-                            el.textContent = el.textContent.replace(/ANUAL/gi, 'VENTAS').replace(/HISTÓRICO/gi, 'VENTAS').replace(/HISTORICO/gi, 'VENTAS');
-                            el.classList.add('texto-ventas');
-                            el.dataset.replaced = "true";
-                        }
-                    }
-                    if (t === "MEDIA MENSUAL GLOBAL") {
-                        el.textContent = "MEDIA ANUAL";
-                    }
-                    if (t === "HISTÓRICO VENTAS" || el.textContent.trim().toUpperCase() === "HISTÓRICO VENTAS") {
-                        el.textContent = "Medias mensuales";
-                    }
-                    // Nuevo: Forzar blanco en cabeceras clave
-                    if (t === "TOTALES" || t === "ULTIMA" || t === "ANUAL") {
-                        el.style.color = '#ffffff';
-                    }
-                }
-            });
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button class="btn-accion btn-rojo" onclick="cerrarEditor()">Cancelar</button>
+                <button class="btn-accion btn-verde" onclick="guardarEdicion()">💾 GUARDAR</button>
+            </div>
+        </div>
+    </div>
 
-            // --- D. TOP CLIENTES (CIFRAS MÁS GRANDES) ---
-            document.querySelectorAll('*').forEach(el => {
-                if (el.children.length === 0 && el.textContent.includes(' €') && !el.classList.contains('euro-menu-fix')) {
-                    // Si el tamaño es pequeño (ej. 0.75rem o 12px), lo subimos un poco
-                    const s = window.getComputedStyle(el);
-                    const size = parseFloat(s.fontSize);
-                    if (size < 13) {
-                        el.style.fontSize = '13px';
-                        el.style.fontWeight = '600';
-                        el.style.opacity = '0.9';
-                    }
-                }
-            });
+    <!-- ELIMINADO VISOR ANTIGUO (visor-mapa) -> Ahora usamos visor-mapa-myl inyectado por mapa-myl.js -->
 
-            // --- E. FECHAS (FORMATO Y TAMAÑO) ---
-            document.querySelectorAll('*').forEach(el => {
-                if (el.children.length === 0) {
-                    const t = el.textContent.trim();
-                    if (/^\d{4}-\d{2}-\d{2}$/.test(t)) {
-                        const [y, m, d] = t.split('-');
-                        el.textContent = `${d}-${m}-${y}`;
-                        el.classList.add('fecha-espanol');
-                    }
-                }
-            });
+    <!-- SCRIPTS MODULARES -->
+    <!-- 1. Data Manager: Base de datos y lógica de negocio -->
+    <script src="./data-manager.js"></script>
 
-            // --- F. CABECERA SUPERIOR (GENERICA - TODAS LAS VENTANAS) ---
-            // Detectar textos en la barra superior (Top < 65px) y forzarlos a blanco
-            document.querySelectorAll('div, span, h1, h2, h3, h4, h5, h6, a, p').forEach(el => {
-                // Solo elementos hoja (sin hijos) con texto
-                if (el.children.length === 0 && el.textContent.trim().length > 0) {
-                    const rect = el.getBoundingClientRect();
-                    // Si está en la zona visual del header (aprox 65px alto)
-                    if (rect.top >= 0 && rect.bottom <= 65) {
-                        // Verificar que no sea transparente (oculto)
-                        if (rect.width > 0 && rect.height > 0) {
-                            // Forzar blanco (con !important para vencer framework CSS)
-                            el.style.setProperty('color', '#ffffff', 'important');
-                        }
-                    }
-                }
-            });
+    <!-- 2. UI Fixes: Correcciones visuales y reactividad (sustituye setInterval) -->
+    <script src="./ui-fixes.js"></script>
 
-            // --- G. ORDENAR PEDIDOS VISUALMENTE (Fecha DESC, luego Nº DESC) ---
-            try {
-                const headers = Array.from(document.querySelectorAll('div, th, span')).filter(x =>
-                    x.textContent.trim() === 'TIENDA' || x.textContent.trim() === 'IMPORTE'
-                );
+    <!-- 3. Mapa: Módulo de mapas independiente -->
+    <script src="./mapa-myl.js"></script>
 
-                if (headers.length > 0) {
-                    let headerEl = headers[0];
-                    let headerRow = headerEl.parentElement;
-                    while (headerRow && headerRow.parentElement && headerRow.children.length < 2) {
-                        headerRow = headerRow.parentElement;
-                    }
+    <!-- 4. Geocodificación Automática (Opcional, si se usa) -->
+    <script src="./geocodificacion-automatica.js"></script>
 
-                    if (headerRow && headerRow.parentElement) {
-                        const container = headerRow.parentElement;
-                        let rows = Array.from(container.children).filter(child =>
-                            child !== headerRow &&
-                            child.textContent.trim() !== '' &&
-                            (child.textContent.includes('€') || child.textContent.includes('/')) &&
-                            /\d/.test(child.textContent) // Debe tener números
-                        );
-
-                        if (rows.length > 1) {
-                            // Helper: Parsear Fecha (dd/mm/yy) -> Timestamp
-                            const getDateScore = (row) => {
-                                const text = row.textContent;
-                                const match = text.match(/(\d{2})\/(\d{2})\/(\d{2})/);
-                                if (match) {
-                                    const d = parseInt(match[1]);
-                                    const m = parseInt(match[2]);
-                                    const y = 2000 + parseInt(match[3]);
-                                    return (y * 10000) + (m * 100) + d; // YYYYMMDD
-                                }
-                                return 0;
-                            };
-
-                            // Helper: Parsear ID (Inicio de línea)
-                            const getId = (row) => {
-                                const match = row.textContent.trim().match(/^(\d+)/);
-                                return match ? parseInt(match[1]) : 0;
-                            };
-
-                            let needsSort = false;
-                            for (let i = 0; i < rows.length - 1; i++) {
-                                const scoreA = getDateScore(rows[i]);
-                                const scoreB = getDateScore(rows[i + 1]);
-
-                                if (scoreA < scoreB) { needsSort = true; break; }
-                                if (scoreA === scoreB) {
-                                    const idA = getId(rows[i]);
-                                    const idB = getId(rows[i + 1]);
-                                    if (idA < idB) { needsSort = true; break; }
-                                }
-                            }
-
-                            if (needsSort) {
-                                rows.sort((a, b) => {
-                                    const dateDiff = getDateScore(b) - getDateScore(a);
-                                    if (dateDiff !== 0) return dateDiff;
-                                    return getId(b) - getId(a);
-                                });
-
-                                let currentAnchor = headerRow;
-                                rows.forEach(row => {
-                                    currentAnchor.after(row);
-                                    currentAnchor = row;
-                                });
-                            }
-                        }
-                    }
-                }
-            } catch (e) { }
-
-        }, 500);
-    </script>
 </body>
 
 </html>
