@@ -78,22 +78,33 @@
     let map = null;
     let markers = [];
     let markerCluster = null;
-    // Iconos más pequeños para mejor rendimiento (15x25px en lugar de 25x41px)
-    const greenIcon = L.icon({ 
-        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png', 
-        iconSize: [15, 25], 
-        iconAnchor: [7, 25], 
-        popupAnchor: [1, -20], 
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png', 
-        shadowSize: [25, 25] 
+
+    // --- FUNCIÓN HELPER PARA FECHAS (Soportar DD/MM/YYYY) ---
+    function parsearFechaSegura(str) {
+        if (!str) return null;
+        if (typeof str === 'number') return new Date(str);
+        const p = String(str).split('/');
+        if (p.length === 3) return new Date(p[2], p[1] - 1, p[0]);
+        const d = new Date(str);
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    // Iconos más pequeños para mejor rendimiento
+    const greenIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+        iconSize: [15, 25],
+        iconAnchor: [7, 25],
+        popupAnchor: [1, -20],
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        shadowSize: [25, 25]
     });
-    const redIcon = L.icon({ 
-        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png', 
-        iconSize: [15, 25], 
-        iconAnchor: [7, 25], 
-        popupAnchor: [1, -20], 
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png', 
-        shadowSize: [25, 25] 
+    const redIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+        iconSize: [15, 25],
+        iconAnchor: [7, 25],
+        popupAnchor: [1, -20],
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        shadowSize: [25, 25]
     });
 
     function initMap() {
@@ -102,7 +113,7 @@
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             }).addTo(map);
-            
+
             // Inicializar cluster de marcadores (si está disponible)
             if (typeof L !== 'undefined' && L.markerClusterGroup && typeof L.markerClusterGroup === 'function') {
                 markerCluster = L.markerClusterGroup({
@@ -128,11 +139,12 @@
                 console.error('El mapa no está inicializado');
                 return;
             }
-            
+
             const clients = JSON.parse(localStorage.getItem('clients') || '[]');
             const orders = JSON.parse(localStorage.getItem('orders') || '[]');
-            
+
             console.log(`Cargando ${clients.length} clientes...`);
+
             const now = new Date();
             const limite30Dias = new Date();
             limite30Dias.setDate(now.getDate() - 30);
@@ -141,53 +153,48 @@
             let ubicados = 0;
             let pendientes = 0;
 
-            // Pre-calcular información de pedidos por cliente para optimizar
+            // Pre-calcular pedidos indexados por ID y Nombre
             const pedidosPorCliente = new Map();
             orders.forEach(o => {
-                const clienteId = o.cliente_id || (o.cliente ? o.cliente : null);
-                if (clienteId) {
-                    if (!pedidosPorCliente.has(clienteId)) {
-                        pedidosPorCliente.set(clienteId, []);
-                    }
-                    pedidosPorCliente.get(clienteId).push(o);
+                const id = o.cliente_id || "";
+                const nombre = (o.cliente || "").toUpperCase();
+                const f = parsearFechaSegura(o.fecha || o.timestamp);
+                if (!f) return;
+
+                const datos = { fecha: f, txt: o.fecha || "" };
+
+                if (id) {
+                    if (!pedidosPorCliente.has(id)) pedidosPorCliente.set(id, []);
+                    pedidosPorCliente.get(id).push(datos);
+                }
+                if (nombre) {
+                    if (!pedidosPorCliente.has(nombre)) pedidosPorCliente.set(nombre, []);
+                    pedidosPorCliente.get(nombre).push(datos);
                 }
             });
 
-            // Ordenar pedidos de cada cliente una sola vez
-            pedidosPorCliente.forEach((pedidos, clienteId) => {
-                pedidos.sort((a, b) => new Date(b.fecha || b.timestamp) - new Date(a.fecha || a.timestamp));
-            });
+            // Ordenar por fecha recientísima
+            pedidosPorCliente.forEach(list => list.sort((a, b) => b.fecha - a.fecha));
 
-            // Filtrar clientes con coordenadas válidas
+            // Filtrar clientes con coordenadas
             const clientesConCoordenadas = [];
             clients.forEach(c => {
-                // Obtener dirección (soporta ambos formatos: inglés y español)
                 const direccion = c.address || c.direccion || '';
                 const nombre = c.name || c.nombre || '';
-                
                 if (!nombre && !direccion) return;
                 total++;
-
-                if (c.lat && c.lon && c.lat !== 0 && c.lat !== 0.0001) {
+                if (c.lat && c.lon && Math.abs(c.lat) > 0.1) {
                     ubicados++;
                     clientesConCoordenadas.push(c);
-                } else if (direccion && direccion.length > 3) {
+                } else if (direccion.length > 3) {
                     pendientes++;
                 }
             });
 
-            // Limpiar marcadores existentes
-            if (markerCluster) {
-                markerCluster.clearLayers();
-            } else {
-                // Si no hay clustering, eliminar marcadores del mapa directamente
-                markers.forEach(m => map.removeLayer(m));
-            }
+            if (markerCluster) markerCluster.clearLayers();
+            else markers.forEach(m => map.removeLayer(m));
             markers = [];
-            
-            console.log(`Clientes con coordenadas: ${clientesConCoordenadas.length}`);
 
-            // Procesar marcadores en lotes para no bloquear la UI
             procesarMarcadoresEnLotes(clientesConCoordenadas, pedidosPorCliente, limite30Dias, total, pendientes);
 
         } catch (e) {
@@ -203,46 +210,39 @@
 
         function procesarLote() {
             const fin = Math.min(index + BATCH_SIZE, clientes.length);
-            
+
             for (let i = index; i < fin; i++) {
                 const c = clientes[i];
-                const idMarcador = `m-${c.id}`;
-                
-                // Buscar pedidos del cliente (por ID o por nombre)
-                let misPedidos = pedidosPorCliente.get(c.id) || [];
-                if (misPedidos.length === 0 && c.name) {
-                    // Buscar por nombre si no hay por ID
-                    const pedidosPorNombre = Array.from(pedidosPorCliente.values())
-                        .flat()
-                        .filter(o => o.cliente && o.cliente.includes(c.name));
-                    if (pedidosPorNombre.length > 0) {
-                        misPedidos = pedidosPorNombre.sort((a, b) => 
-                            new Date(b.fecha || b.timestamp) - new Date(a.fecha || a.timestamp)
-                        );
-                    }
-                }
+                const id = c.id;
+                const nombreNorm = (c.name || c.nombre || "").toUpperCase();
+
+                // Buscar pedidos por ID o por Nombre (ambos están en el Map)
+                let misPedidos = pedidosPorCliente.get(id) || pedidosPorCliente.get(nombreNorm) || [];
 
                 let tieneVentaReciente = false;
                 let ultimaFecha = "Sin ventas";
 
                 if (misPedidos.length > 0) {
-                    const fechaVenta = new Date(misPedidos[0].fecha || misPedidos[0].timestamp);
-                    ultimaFecha = fechaVenta.toLocaleDateString();
-                    if (fechaVenta >= limite30Dias) tieneVentaReciente = true;
+                    const v = misPedidos[0]; // Ya viene ordenado por fecha
+                    ultimaFecha = v.txt || v.fecha.toLocaleDateString();
+                    if (v.fecha >= limite30Dias) tieneVentaReciente = true;
                 }
 
                 const nombre = c.name || c.nombre || 'Cliente';
+                const poblacion = c.city || c.poblacion || '';
                 const direccion = c.address || c.direccion || '';
-                
+
                 const marker = L.marker([c.lat, c.lon], { icon: tieneVentaReciente ? greenIcon : redIcon })
                     .bindPopup(`
-                        <div style="font-family: sans-serif; padding: 5px;">
-                            <strong style="color: #2563eb; font-size: 14px;">${nombre}</strong><br>
-                            <span style="color: #64748b; font-size: 12px;">${direccion}</span><br>
-                            <span style="font-size: 11px; font-weight: bold;">Venta: ${ultimaFecha}</span>
+                        <div style="font-family: sans-serif; padding: 5px; min-width: 150px;">
+                            <div style="color: #2563eb; font-weight: 800; font-size: 14px; margin-bottom: 2px;">${nombre}</div>
+                            <div style="color: #475569; font-weight: 600; font-size: 12px; margin-bottom: 4px;">📍 ${poblacion}</div>
+                            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 5px 0;">
+                            <div style="color: #64748b; font-size: 11px;">${direccion}</div>
+                            <div style="font-size: 11px; font-weight: bold; margin-top: 3px;">Ult. Venta: ${ultimaFecha}</div>
                         </div>
                     `);
-                
+
                 marker._id = idMarcador;
                 markers.push(marker);
                 if (markerCluster) {
@@ -255,7 +255,7 @@
             }
 
             index = fin;
-            
+
             // Actualizar progreso
             const porcentaje = total > 0 ? ((total - pendientes) / total * 100) : 0;
             document.getElementById('st-contador').textContent = `${procesados} / ${total - pendientes}`;
@@ -281,44 +281,54 @@
 
     // Contador de reintentos por cliente para evitar loops infinitos
     const reintentosPorCliente = new Map();
-    
+
     // Función para agregar un solo marcador sin recargar todos
     function agregarMarcadorCliente(cliente, orders, limite30Dias) {
         const idMarcador = `m-${cliente.id}`;
-        
+
         // Verificar si el marcador ya existe
         const existente = markers.find(m => m._id === idMarcador);
         if (existente) {
             return; // Ya existe, no hacer nada
         }
-        
+
         // Buscar pedidos del cliente
-        let misPedidos = orders.filter(o => o.cliente_id == cliente.id || (o.cliente && o.cliente.includes(cliente.name || cliente.nombre || '')));
+        let misPedidos = orders.filter(o => o.cliente_id == cliente.id || (o.cliente && (o.cliente || "").toUpperCase().includes((cliente.name || "").toUpperCase())));
         let tieneVentaReciente = false;
         let ultimaFecha = "Sin ventas";
 
         if (misPedidos.length > 0) {
-            misPedidos.sort((a, b) => new Date(b.fecha || b.timestamp) - new Date(a.fecha || a.timestamp));
-            const fechaVenta = new Date(misPedidos[0].fecha || misPedidos[0].timestamp);
-            ultimaFecha = fechaVenta.toLocaleDateString();
-            if (fechaVenta >= limite30Dias) tieneVentaReciente = true;
+            // Normalizar y ordenar pedidos
+            const listaNormalizada = misPedidos.map(o => ({
+                f: parsearFechaSegura(o.fecha || o.timestamp),
+                t: o.fecha || ""
+            })).filter(x => x.f !== null).sort((a, b) => b.f - a.f);
+
+            if (listaNormalizada.length > 0) {
+                const v = listaNormalizada[0];
+                ultimaFecha = v.t || v.f.toLocaleDateString();
+                if (v.f >= limite30Dias) tieneVentaReciente = true;
+            }
         }
 
         const nombre = cliente.name || cliente.nombre || 'Cliente';
+        const poblacion = cliente.city || cliente.poblacion || '';
         const direccion = cliente.address || cliente.direccion || '';
-        
+
         const marker = L.marker([cliente.lat, cliente.lon], { icon: tieneVentaReciente ? greenIcon : redIcon })
             .bindPopup(`
-                <div style="font-family: sans-serif; padding: 5px;">
-                    <strong style="color: #2563eb; font-size: 14px;">${nombre}</strong><br>
-                    <span style="color: #64748b; font-size: 12px;">${direccion}</span><br>
-                    <span style="font-size: 11px; font-weight: bold;">Venta: ${ultimaFecha}</span>
+                <div style="font-family: sans-serif; padding: 5px; min-width: 150px;">
+                    <div style="color: #2563eb; font-weight: 800; font-size: 14px; margin-bottom: 2px;">${nombre}</div>
+                    <div style="color: #475569; font-weight: 600; font-size: 12px; margin-bottom: 4px;">📍 ${poblacion}</div>
+                    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 5px 0;">
+                    <div style="color: #64748b; font-size: 11px;">${direccion}</div>
+                    <div style="font-size: 11px; font-weight: bold; margin-top: 3px;">Ult. Venta: ${ultimaFecha}</div>
                 </div>
             `);
-        
+
         marker._id = idMarcador;
         markers.push(marker);
-        
+
         if (markerCluster) {
             markerCluster.addLayer(marker);
         } else {
@@ -330,7 +340,7 @@
         if (document.getElementById('visor-mapa-myl').style.display === 'none') return;
 
         const clients = JSON.parse(localStorage.getItem('clients') || '[]');
-        
+
         // Buscar cliente sin coordenadas (soporta ambos formatos)
         const target = clients.find(c => {
             const direccion = c.address || c.direccion || '';
@@ -346,7 +356,7 @@
         const nombre = target.name || target.nombre || 'Cliente';
         const clienteId = target.id;
         const reintentos = reintentosPorCliente.get(clienteId) || 0;
-        
+
         // Si ha fallado 3 veces, marcarlo como no encontrado y seguir
         if (reintentos >= 3) {
             target.lat = 0.0001;
@@ -365,40 +375,40 @@
             const direccion = target.address || target.direccion || '';
             const ciudad = target.city || target.localidad || '';
             const provincia = target.province || target.provincia || '';
-            
+
             // Intentar diferentes niveles de búsqueda
             const queries = [];
-            
+
             // 1. Búsqueda completa: dirección + ciudad + provincia
             if (direccion && ciudad && provincia) {
                 queries.push(`${direccion}, ${ciudad}, ${provincia}, España`);
             }
-            
+
             // 2. Búsqueda sin dirección específica: ciudad + provincia
             if (ciudad && provincia) {
                 queries.push(`${ciudad}, ${provincia}, España`);
             }
-            
+
             // 3. Solo provincia
             if (provincia) {
                 queries.push(`${provincia}, España`);
             }
-            
+
             // 4. Solo ciudad si existe
             if (ciudad) {
                 queries.push(`${ciudad}, España`);
             }
 
             let encontrado = false;
-            
+
             for (const query of queries) {
                 if (encontrado) break;
-                
+
                 try {
                     // Timeout más largo (15 segundos) y mejor manejo
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 15000);
-                    
+
                     const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&addressdetails=1`, {
                         signal: controller.signal,
                         headers: {
@@ -435,7 +445,7 @@
             if (!encontrado) {
                 // Incrementar contador de reintentos
                 reintentosPorCliente.set(clienteId, reintentos + 1);
-                
+
                 if (reintentos < 2) {
                     // Reintentar este mismo cliente
                     console.warn(`⚠️ No encontrado, reintentando (${reintentos + 1}/3)...`);
@@ -460,9 +470,9 @@
                 const now = new Date();
                 const limite30Dias = new Date();
                 limite30Dias.setDate(now.getDate() - 30);
-                
+
                 agregarMarcadorCliente(target, orders, limite30Dias);
-                
+
                 // Actualizar contador sin recargar todo
                 const totalClientes = clients.length;
                 const clientesConCoords = clients.filter(c => c.lat && c.lon && c.lat !== 0 && c.lat !== 0.0001).length;
@@ -470,7 +480,7 @@
                 const porcentaje = totalClientes > 0 ? (clientesConCoords / totalClientes * 100) : 0;
                 document.getElementById('p-fill').style.width = `${porcentaje}%`;
             }
-            
+
             // Continuar con el siguiente cliente
             setTimeout(buscarSiguienteDireccion, 2000); // Pausa de cortesía para la API (2 segundos)
 
@@ -509,7 +519,7 @@
                 document.getElementById('visor-mapa-myl').style.display = 'none';
             };
         }
-        
+
         const btnReparar = document.getElementById('btn-reparar');
         if (btnReparar) {
             btnReparar.onclick = () => {
