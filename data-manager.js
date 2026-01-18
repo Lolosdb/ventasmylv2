@@ -118,7 +118,9 @@
             const data = localStorage.getItem('clients');
             if (!data) return;
 
-            let rawClients = JSON.parse(data);
+            let rawClients = [];
+            try { rawClients = JSON.parse(data); } catch (e) { return; }
+
             if (!Array.isArray(rawClients)) return;
 
             let huboCambios = false;
@@ -128,59 +130,49 @@
             let clients = rawClients.filter(c => c && typeof c === 'object');
             if (clients.length !== rawClients.length) huboCambios = true;
 
-            // 2. NORMALIZACIÓN DE CADA CLIENTE
-            clients = clients.map(c => {
+            // 2. NORMALIZACIÓN SUAVE (Solo asegura ID y NAME)
+            clients = clients.map((c, idx) => {
+                // Nombre real
                 const nombreReal = safe(c.name || c.nombre || c.tienda || c.cliente);
 
-                // Si no tiene nombre ni ID, es un dato basura
-                if (!nombreReal && !c.id) return null;
+                // ID numérico (Preferente para Dash)
+                let idNum = parseInt(c.id || c.cod_cliente);
+                if (isNaN(idNum)) idNum = 1000 + idx;
 
-                const camposEspejo = ['nombre', 'tienda', 'cliente', 'poblacion', 'provincia', 'direccion', 'telefono', 'movil', 'contacto', 'correo'];
-                const faltaCampo = camposEspejo.some(f => c[f] === undefined || c[f] === null || c[f] === "");
-
-                if (faltaCampo || !c.name || !c.id) {
+                // Si falta ID o Nombre, normalizamos
+                if (!c.name || !c.id || isNaN(parseInt(c.id))) {
                     huboCambios = true;
-                    // Forzar ID numérico si es posible para compatibilidad con Dash
-                    const idNum = parseInt(c.id || c.cod_cliente || (1000 + idx));
-                    const n = nombreReal || "Cliente sin nombre";
-
                     return {
-                        id: isNaN(idNum) ? (1000 + idx) : idNum,
+                        id: idNum,
                         code: safe(c.code || c.cod_cliente || c.codigo || idNum),
-                        name: n,
-                        nombre: n,
-                        cif: safe(c.cif || c.nif || c.documento || ""),
-                        email: safe(c.email || c.correo || c.mail || ""),
-                        address: safe(c.address || c.direccion || ""),
-                        contact: safe(c.contact || c.contacto || ""),
-                        city: safe(c.city || c.poblacion || c.localidad || ""),
-                        province: safe(c.province || c.provincia || ""),
-                        phone: safe(c.phone || c.telefono || c.movil || ""),
-                        // Preservar lat/lng
-                        lat: c.lat || null,
-                        lng: c.lng || null
+                        name: nombreReal || "Cliente " + idNum,
+                        // Mantenemos el resto de datos tal cual
+                        ...c,
+                        // Aseguramos campos clave del bundle
+                        address: safe(c.address || c.direccion),
+                        phone: safe(c.phone || c.telefono),
+                        email: safe(c.email || c.correo)
                     };
                 }
                 return c;
-            }).filter(c => c !== null); // Eliminar basura detectada en el map
+            });
 
             if (huboCambios || clients.length > 0) {
                 const json = JSON.stringify(clients);
                 localStorage.setItem('clients', json);
-                localStorage.setItem('clientes', json);
-                localStorage.setItem('data_clientes', json);
 
+                // Actualizamos variables globales
                 window.clients = clients;
-                console.log(`✅ Base de Datos Sincronizada: ${clients.length} clientes.`);
 
-                // Si hubo cambios reales, recargamos para que React/Dash los vea
-                if (huboCambios) {
-                    console.log('🔄 Reiniciando para aplicar normalización de datos...');
-                    location.reload();
+                if (huboCambios && !silencioso) {
+                    console.log(`✅ Base de Datos Reparada: ${clients.length} clientes.`);
+                    // SOLO recargamos si no es inicio automático (para evitar bucles)
+                } else {
+                    console.log(`✅ Datos Validados: ${clients.length} clientes.`);
                 }
             }
         } catch (e) {
-            console.error('❌ Error crítico en auto-reparación:', e);
+            console.error('❌ Error no crítico en auto-reparación:', e);
         }
     }
     function borrarDatos() {
