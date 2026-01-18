@@ -17,16 +17,18 @@
             touch-action: none !important;
         }
 
-        /* Forzar scroll en cualquier tarjeta blanca dentro de un contenedor fijo (modal) */
+        /* Forzar scroll en cualquier tarjeta blanca o gris claro (slate-50) */
         div[style*="fixed"] div.bg-white, 
         div.fixed div.bg-white,
+        div.fixed div[class*="bg-slate-50"],
         .modal-card,
         [class*="modal"] [class*="card"] {
-            max-height: 80vh !important;
+            max-height: 90vh !important;
             overflow-y: auto !important;
             -webkit-overflow-scrolling: touch !important;
-            padding-bottom: 60px !important;
-            display: block !important;
+            padding-bottom: 0px !important; /* El padding lo maneja el footer */
+            display: flex !important; /* Importante para que el footer no flote mal */
+            flex-direction: column !important;
         }
 
         /* Asegurar que el botón flotante no moleste */
