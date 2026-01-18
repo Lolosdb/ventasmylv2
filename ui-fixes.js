@@ -27,10 +27,10 @@
             overflow-y: auto !important;
             -webkit-overflow-scrolling: touch !important; 
             overscroll-behavior: contain !important;
-            max-height: 65vh !important; /* Más corto aún para seguridad total */
+            max-height: 85vh !important; /* Aumentado a petición del usuario */
             display: block !important;
             pointer-events: auto !important;
-            padding-bottom: 120px !important; /* Margen gigante para ver botones */
+            padding-bottom: 120px !important; /* Mantener margen para ver botones */
             box-sizing: border-box !important;
         }
     `;
