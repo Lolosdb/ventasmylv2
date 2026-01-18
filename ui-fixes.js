@@ -25,19 +25,27 @@
     });
 
     function aplicarCorreccionesUI() {
-        const titulos = ['editar pedido', 'editar cliente', 'nuevo pedido', 'nuevo cliente', 'detalle pedido'];
-        let modalActivo = false;
+        const titulosModales = ['editar pedido', 'editar cliente', 'nuevo pedido', 'nuevo cliente', 'detalle pedido'];
+        let modalRealmenteAbierto = false;
 
         document.querySelectorAll('h1, h2, h3, div, span').forEach(el => {
             if (!el.textContent || el.offsetParent === null) return;
+
             const txt = el.textContent.trim().toLowerCase();
-            if (titulos.some(t => txt === t)) {
-                modalActivo = true;
+            if (titulosModales.includes(txt)) {
+                // Buscamos el contenedor del modal (la "tarjeta")
                 let p = el.parentElement;
                 while (p && p.tagName !== 'BODY') {
                     const s = window.getComputedStyle(p);
-                    if ((s.backgroundColor !== 'rgba(0, 0, 0, 0)' && s.backgroundColor !== 'transparent') && (s.boxShadow !== 'none' || parseInt(s.borderRadius) > 0)) {
-                        if (!p.classList.contains('modal-card-fixed-scroll')) p.classList.add('modal-card-fixed-scroll');
+                    const zIndex = parseInt(s.zIndex) || 0;
+                    const esFixedBajo = s.position === 'fixed' || s.position === 'absolute';
+
+                    // Solo es un modal real si tiene z-index alto o fondo con sombra
+                    if (zIndex > 100 || (s.boxShadow !== 'none' && esFixedBajo)) {
+                        modalRealmenteAbierto = true;
+                        if (!p.classList.contains('modal-card-fixed-scroll')) {
+                            p.classList.add('modal-card-fixed-scroll');
+                        }
                         break;
                     }
                     p = p.parentElement;
@@ -45,8 +53,12 @@
             }
         });
 
-        if (modalActivo) { if (!document.body.classList.contains('modal-open')) document.body.classList.add('modal-open'); }
-        else { if (document.body.classList.contains('modal-open')) document.body.classList.remove('modal-open'); }
+        // Solo bloqueamos el body si hay un modal real activo
+        if (modalRealmenteAbierto) {
+            if (!document.body.classList.contains('modal-open')) document.body.classList.add('modal-open');
+        } else {
+            if (document.body.classList.contains('modal-open')) document.body.classList.remove('modal-open');
+        }
     }
 
     function gestionarTextosAyuda() {

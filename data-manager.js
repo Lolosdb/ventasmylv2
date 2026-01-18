@@ -9,6 +9,9 @@
 
     console.log('💾 Data Manager cargado - v2 (Normalización Integrada)');
 
+    // AUTO-REPARACIÓN AL CARGAR (Silenciosa)
+    setTimeout(() => repararBaseDatos(true), 500);
+
     // EXPORTAR FUNCIONES GLOBALES
     window.cargarExcel = cargarExcel;
     window.repararBaseDatos = repararBaseDatos;
@@ -100,7 +103,58 @@
     }
 
     // Mantenemos estas funciones por si se necesitan internamente
-    function repararBaseDatos() { /* Lógica ya integrada en cargarExcel */ location.reload(); }
+    function repararBaseDatos(silencioso = false) {
+        try {
+            const data = localStorage.getItem('clients');
+            if (!data) return;
+            let clients = JSON.parse(data);
+            let huboCambios = false;
+
+            const safe = (val) => (val === undefined || val === null) ? "" : String(val).trim();
+
+            clients = clients.map(c => {
+                const nombreReal = safe(c.name || c.nombre || c.tienda || c.cliente);
+                if (!nombreReal) return c;
+
+                // Verificar si faltan campos "espejo"
+                const camposEspejo = ['nombre', 'tienda', 'cliente', 'poblacion', 'provincia', 'direccion', 'telefono', 'movil', 'contacto', 'correo'];
+                const faltaCampo = camposEspejo.some(f => !c[f]);
+
+                if (faltaCampo) {
+                    huboCambios = true;
+                    return {
+                        ...c,
+                        name: nombreReal,
+                        nombre: nombreReal,
+                        tienda: nombreReal,
+                        cliente: nombreReal,
+                        city: safe(c.city || c.poblacion || c.localidad),
+                        poblacion: safe(c.city || c.poblacion || c.localidad),
+                        province: safe(c.province || c.provincia),
+                        provincia: safe(c.province || c.provincia),
+                        address: safe(c.address || c.direccion),
+                        direccion: safe(c.address || c.direccion),
+                        phone: safe(c.phone || c.telefono || c.movil),
+                        telefono: safe(c.phone || c.telefono || c.movil),
+                        movil: safe(c.phone || c.telefono || c.movil),
+                        contact: safe(c.contact || c.contacto),
+                        contacto: safe(c.contact || c.contacto),
+                        email: safe(c.email || c.correo || c.mail),
+                        correo: safe(c.email || c.correo || c.mail),
+                    };
+                }
+                return c;
+            });
+
+            if (huboCambios) {
+                localStorage.setItem('clients', JSON.stringify(clients));
+                console.log('✅ Base de datos auto-reparada.');
+                if (!silencioso) location.reload();
+            }
+        } catch (e) {
+            console.error('Error en auto-reparación:', e);
+        }
+    }
     function borrarDatos() {
         if (confirm("¿Borrar todos los clientes?")) {
             localStorage.setItem('clients', '[]');
