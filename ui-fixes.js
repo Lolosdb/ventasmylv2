@@ -43,13 +43,31 @@
             el.textContent && el.textContent.trim() === "Editar Pedido"
         );
 
+        if (titulos.length > 0) {
+            // BLOQUEAR SCROLL DEL BODY (Para que el fondo no se mueva)
+            if (document.body.style.overflow !== 'hidden') {
+                document.body.style.setProperty('overflow', 'hidden', 'important');
+            }
+        } else {
+            // RESTAURAR SCROLL SI NO ESTÁ EL MODAL Y NO ESTÁ EL MAPA
+            const visorMap = document.getElementById('visor-mapa-myl');
+            if (document.body.style.overflow === 'hidden' && (!visorMap || visorMap.style.display === 'none')) {
+                document.body.style.removeProperty('overflow');
+            }
+        }
+
         titulos.forEach(el => {
             // 1. Asegurar contenedor padre (bloqueo oscuro) con scroll
             let wrapper = el.closest('div[style*="position: fixed"]') || el.closest('div[style*="z-index"]');
             if (wrapper) {
+                // Asegurar que el overlay ocupe todo
+                if (wrapper.style.height !== '100%') wrapper.style.setProperty('height', '100%', 'important');
+
+                // Habilitar scroll en el wrapper
                 if (wrapper.style.overflowY !== 'auto') {
                     wrapper.style.setProperty('overflow-y', 'auto', 'important');
-                    wrapper.style.setProperty('padding-bottom', '80px', 'important'); // Espacio footer
+                    wrapper.style.setProperty('padding-bottom', '80px', 'important');
+                    wrapper.style.setProperty('overscroll-behavior', 'contain', 'important');
                 }
             }
 
@@ -60,10 +78,11 @@
                 try {
                     const s = window.getComputedStyle(p);
                     if (s.backgroundColor === 'rgb(255, 255, 255)' || s.backgroundColor === '#ffffff' || s.backgroundColor === 'white') {
-                        if (p.style.maxHeight !== '80vh') {
-                            p.style.setProperty('max-height', '80vh', 'important');
+                        if (p.style.maxHeight !== '85vh') {
+                            p.style.setProperty('max-height', '85vh', 'important');
                             p.style.setProperty('overflow-y', 'auto', 'important');
                             p.style.setProperty('display', 'block', 'important');
+                            p.style.setProperty('overscroll-behavior', 'contain', 'important');
                         }
                         tarjetaEncontrada = true;
                     }
@@ -85,7 +104,6 @@
                 const r = d.getBoundingClientRect();
                 if (r.bottom >= window.innerHeight) {
                     d.style.zIndex = "9999";
-                    // Invertir iconos blancos sobre fondo blanco si pasa
                     d.querySelectorAll('svg, img').forEach(i => i.style.filter = 'brightness(0) invert(1)');
                 }
             }
