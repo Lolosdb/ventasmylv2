@@ -9,8 +9,8 @@
 
     console.log('💾 Data Manager cargado - v2 (Normalización Integrada)');
 
-    // AUTO-REPARACIÓN AL CARGAR (Silenciosa)
-    setTimeout(() => repararBaseDatos(true), 500);
+    // AUTO-REPARACIÓN INMEDIATA (Para evitar crasheos de la app)
+    repararBaseDatos(true);
 
     // EXPORTAR FUNCIONES GLOBALES
     window.cargarExcel = cargarExcel;
@@ -107,27 +107,39 @@
         try {
             const data = localStorage.getItem('clients');
             if (!data) return;
-            let clients = JSON.parse(data);
-            let huboCambios = false;
 
+            let rawClients = JSON.parse(data);
+            if (!Array.isArray(rawClients)) return;
+
+            let huboCambios = false;
             const safe = (val) => (val === undefined || val === null) ? "" : String(val).trim();
 
+            // 1. FILTRADO Y LIMPIEZA INICIAL
+            let clients = rawClients.filter(c => c && typeof c === 'object');
+            if (clients.length !== rawClients.length) huboCambios = true;
+
+            // 2. NORMALIZACIÓN DE CADA CLIENTE
             clients = clients.map(c => {
                 const nombreReal = safe(c.name || c.nombre || c.tienda || c.cliente);
-                if (!nombreReal) return c;
 
-                // Verificar si faltan campos "espejo"
+                // Si no tiene nombre ni ID, es un dato basura
+                if (!nombreReal && !c.id) return null;
+
                 const camposEspejo = ['nombre', 'tienda', 'cliente', 'poblacion', 'provincia', 'direccion', 'telefono', 'movil', 'contacto', 'correo'];
-                const faltaCampo = camposEspejo.some(f => !c[f]);
+                const faltaCampo = camposEspejo.some(f => c[f] === undefined || c[f] === null || c[f] === "");
 
-                if (faltaCampo) {
+                if (faltaCampo || !c.name || !c.id) {
                     huboCambios = true;
+                    const idSeguro = c.id || String(Math.floor(Math.random() * 1000000));
+                    const n = nombreReal || "Cliente sin nombre";
+
                     return {
                         ...c,
-                        name: nombreReal,
-                        nombre: nombreReal,
-                        tienda: nombreReal,
-                        cliente: nombreReal,
+                        id: idSeguro,
+                        name: n,
+                        nombre: n,
+                        tienda: n,
+                        cliente: n,
                         city: safe(c.city || c.poblacion || c.localidad),
                         poblacion: safe(c.city || c.poblacion || c.localidad),
                         province: safe(c.province || c.provincia),
@@ -144,15 +156,19 @@
                     };
                 }
                 return c;
-            });
+            }).filter(c => c !== null); // Eliminar basura detectada en el map
 
-            if (huboCambios) {
-                localStorage.setItem('clients', JSON.stringify(clients));
-                console.log('✅ Base de datos auto-reparada.');
-                if (!silencioso) location.reload();
+            if (huboCambios || clients.length > 0) {
+                const json = JSON.stringify(clients);
+                localStorage.setItem('clients', json);
+                localStorage.setItem('clientes', json); // Multi-idioma
+                localStorage.setItem('data_clientes', json); // Posible clave de la app
+
+                console.log(`✅ Datos normalizados en múltiples llaves: ${clients.length} clientes.`);
+                if (huboCambios && !silencioso) location.reload();
             }
         } catch (e) {
-            console.error('Error en auto-reparación:', e);
+            console.error('❌ Error crítico en auto-reparación:', e);
         }
     }
     function borrarDatos() {

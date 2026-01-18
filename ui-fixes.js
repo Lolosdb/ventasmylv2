@@ -28,20 +28,26 @@
         const titulosModales = ['editar pedido', 'editar cliente', 'nuevo pedido', 'nuevo cliente', 'detalle pedido'];
         let modalRealmenteAbierto = false;
 
+        // PROTECCIÓN: Si vemos el texto de "importar Excel", NO estamos en un modal
+        const textoImportar = document.body.innerText.includes('Selecciona un archivo Excel');
+        if (textoImportar && !document.querySelector('.modal-card-fixed-scroll')) {
+            if (document.body.classList.contains('modal-open')) document.body.classList.remove('modal-open');
+            return;
+        }
+
         document.querySelectorAll('h1, h2, h3, div, span').forEach(el => {
             if (!el.textContent || el.offsetParent === null) return;
 
             const txt = el.textContent.trim().toLowerCase();
             if (titulosModales.includes(txt)) {
-                // Buscamos el contenedor del modal (la "tarjeta")
                 let p = el.parentElement;
                 while (p && p.tagName !== 'BODY') {
                     const s = window.getComputedStyle(p);
                     const zIndex = parseInt(s.zIndex) || 0;
-                    const esFixedBajo = s.position === 'fixed' || s.position === 'absolute';
+                    const esCapaSuperior = s.position === 'fixed' || s.position === 'absolute';
 
-                    // Solo es un modal real si tiene z-index alto o fondo con sombra
-                    if (zIndex > 100 || (s.boxShadow !== 'none' && esFixedBajo)) {
+                    // CRITERIO ESTRICTO: Un modal debe estar arriba de todo (z > 200) y tener sombra
+                    if (esCapaSuperior && zIndex > 100 && (s.boxShadow !== 'none' || s.backgroundColor !== 'transparent')) {
                         modalRealmenteAbierto = true;
                         if (!p.classList.contains('modal-card-fixed-scroll')) {
                             p.classList.add('modal-card-fixed-scroll');
@@ -53,7 +59,6 @@
             }
         });
 
-        // Solo bloqueamos el body si hay un modal real activo
         if (modalRealmenteAbierto) {
             if (!document.body.classList.contains('modal-open')) document.body.classList.add('modal-open');
         } else {
