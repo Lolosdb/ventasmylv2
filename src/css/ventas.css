@@ -1,0 +1,199 @@
+/* Ventas View Styles */
+
+.ventas-container {
+    flex: 1;
+    /* Match parent height */
+    display: flex;
+    flex-direction: column;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    overflow-x: auto;
+    overflow-y: hidden;
+    /* No vertical scroll */
+    position: relative;
+}
+
+/* Scrollbar styling */
+.ventas-container::-webkit-scrollbar {
+    height: 6px;
+}
+
+.ventas-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ventas-container::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.ventas-header {
+    display: flex;
+    background-color: #1e293b;
+    color: white;
+    padding: 0.75rem 0.25rem;
+    font-weight: bold;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    text-align: center;
+    border-radius: 12px 12px 0 0;
+    width: 100%;
+    min-width: max-content;
+}
+
+.col-ventas-mes {
+    flex: 0 0 85px;
+    /* Sync with meses */
+    min-width: 85px;
+    text-align: left;
+    padding-left: 0.75rem;
+    position: sticky;
+    left: 0;
+    z-index: 30;
+    background-color: #1e293b;
+    display: flex;
+    align-items: center;
+}
+
+.col-ventas-year {
+    flex: 0 0 100px;
+    /* Sync with years */
+    min-width: 100px;
+}
+
+.col-ventas-year {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.ventas-year-box {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 4px 0;
+    width: 90%;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-weight: 800;
+}
+
+.ventas-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: max-content;
+}
+
+.ventas-row {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.85rem;
+    padding: 0 0.25rem;
+    width: 100%;
+}
+
+.ventas-row:nth-child(even) {
+    background-color: #fafafa;
+}
+
+.cell-ventas-mes {
+    flex: 0 0 85px;
+    min-width: 85px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding-left: 0.75rem;
+    position: sticky;
+    left: 0;
+    z-index: 10;
+}
+
+.ventas-row:nth-child(odd) .cell-ventas-mes {
+    background-color: white;
+}
+
+.ventas-row:nth-child(even) .cell-ventas-mes {
+    background-color: #fafafa;
+}
+
+.cell-ventas-input,
+.total-cell-complex {
+    flex: 0 0 100px;
+    min-width: 100px;
+    text-align: center;
+}
+
+.ventas-input {
+    width: 100%;
+    text-align: center;
+    border: none;
+    background: transparent;
+    font-weight: 700;
+    color: #334155;
+    font-family: inherit;
+    font-size: 0.85rem;
+}
+
+.ventas-input:focus {
+    outline: none;
+    background-color: #f0f9ff;
+}
+
+.ventas-total-row {
+    background-color: #f1f5f9;
+    border-top: 2px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0.25rem;
+    font-weight: 900;
+    color: var(--text-primary);
+    width: 100%;
+    min-width: max-content;
+    flex-shrink: 0;
+}
+
+.ventas-total-row .col-ventas-mes.total-amount {
+    flex: 0 0 85px;
+    min-width: 85px;
+    padding-left: 0.75rem;
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    background-color: #f1f5f9;
+}
+
+.total-cell-complex {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1px;
+    line-height: 1.1;
+}
+
+.total-amount {
+    color: #0f172a;
+    font-weight: 900;
+    font-size: 0.9rem;
+}
+
+.total-percent {
+    font-size: 0.65rem;
+    font-weight: 800;
+}
+
+.percent-green {
+    color: #16a34a;
+}
+
+.percent-red {
+    color: #ef4444;
+}
+
+.icon-btn.active-header {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+}

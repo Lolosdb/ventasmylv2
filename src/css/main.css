@@ -1,0 +1,681 @@
+:root {
+    /* Colors */
+    --primary-blue: #0ea5e9;
+    /* Light blue header from screenshot */
+    --primary-dark-blue: #0284c7;
+    --accent-purple: #6366f1;
+    --accent-purple-light: #e0e7ff;
+    --background-gray: #f8fafc;
+    --card-white: #ffffff;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --success-green: #22c55e;
+    --danger-red: #ef4444;
+    --border-color: #e2e8f0;
+
+    /* Variables for compatibility with my previous overwrite just in case */
+    --primary: var(--primary-blue);
+    --text: var(--text-primary);
+    --background: var(--background-gray);
+
+    /* Spacing */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+
+    /* Border Radius */
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-full: 9999px;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+
+    /* Mobile Simulation on Desktop */
+    background-color: #e2e8f0;
+    /* Darker bg outside app */
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+body.no-scroll {
+    overflow: hidden;
+}
+
+#app {
+    width: 100%;
+    max-width: 480px;
+    /* Mobile width cap */
+    background-color: var(--background-gray);
+    min-height: 100vh;
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow-x: hidden;
+    padding-bottom: 80px;
+    /* Space for bottom nav */
+}
+
+/* Typography map */
+.text-xs {
+    font-size: 0.75rem;
+}
+
+.text-sm {
+    font-size: 0.875rem;
+}
+
+.text-base {
+    font-size: 1rem;
+}
+
+.text-lg {
+    font-size: 1.125rem;
+}
+
+.text-xl {
+    font-size: 1.25rem;
+}
+
+.text-2xl {
+    font-size: 1.5rem;
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+.font-semibold {
+    font-weight: 600;
+}
+
+.text-gray {
+    color: var(--text-secondary);
+}
+
+.text-white {
+    color: white;
+}
+
+.text-green {
+    color: var(--success-green);
+}
+
+.text-red {
+    color: var(--danger-red);
+}
+
+.text-blue-primary {
+    color: var(--primary-blue);
+}
+
+/* Layout Utilities */
+.flex {
+    display: flex;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.justify-center {
+    justify-content: center;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.flex-2 {
+    flex: 2;
+}
+
+.flex-3 {
+    flex: 3;
+}
+
+.flex-4 {
+    flex: 4;
+}
+
+.grid {
+    display: grid;
+}
+
+.grid-cols-1 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gap-1 {
+    gap: 0.25rem;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+.gap-3 {
+    gap: 0.75rem;
+}
+
+.gap-4 {
+    gap: 1rem;
+}
+
+.gap-6 {
+    gap: 1.5rem;
+}
+
+.btn-danger {
+    background-color: var(--danger-red);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-danger:active {
+    transform: scale(0.98);
+}
+
+.h-full {
+    height: 100%;
+}
+
+.mb-1 {
+    margin-bottom: 0.25rem;
+}
+
+.mb-2 {
+    margin-bottom: 0.5rem;
+}
+
+.mb-4 {
+    margin-bottom: 1rem;
+}
+
+.mb-6 {
+    margin-bottom: 1.5rem;
+}
+
+.mb-8 {
+    margin-bottom: 2rem;
+}
+
+.mb-10 {
+    margin-bottom: 2.5rem;
+}
+
+.mt-6 {
+    margin-top: 1.5rem;
+}
+
+.p-4 {
+    padding: 1rem;
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* Components */
+.card {
+    background-color: var(--card-white);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.header {
+    background-color: var(--primary-blue);
+    color: white;
+    padding: var(--spacing-md);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: var(--shadow-md);
+}
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    /* We need to restrict fixed bottom nav to the #app width if possible, 
+       but position: fixed is relative to viewport. 
+       Workaround: effectively it will be full width if we don't be careful, 
+       but since #app is centered, we might want it sticky inside? 
+       Actually, standard mobile view on PC usually has fixed nav at bottom of viewport 
+       OR bottom of the container. 
+       Let's try to make it bounded to the max-width if possible, or just accept full width?
+       Better: use sticky on #app or absolute.
+    */
+    /* Simple fix for now: let it render, user didn't complain about nav position yet, just style */
+    /* To stick to the "Phone" view, we ideally want it inside the #app container at bottom */
+    width: 100%;
+    max-width: 480px;
+    /* Match app width */
+    background-color: var(--primary-blue);
+    display: flex;
+    justify-content: space-around;
+    padding: var(--spacing-sm) 0;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 50;
+    /* Center it */
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    font-size: 0.7rem;
+    gap: 2px;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.nav-item.active {
+    color: white;
+}
+
+.nav-item .material-icons-round {
+    font-size: 24px;
+}
+
+/* Button & Icons */
+.icon-btn {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.icon-circle-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #eff6ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+}
+
+/* Custom Scrollbar hide */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+/* Fab Btn */
+.fab-btn {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    /* Adjust for centered app */
+    /* Only works well if relative to viewport. For a centered app, this is tricky. */
+    /* Let's try to keep it simple. */
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: var(--primary-blue);
+    color: white;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 40;
+}
+
+/* Adjust FAB and Nav for the centered layout */
+@media (min-width: 481px) {
+    /* .bottom-nav already centered via global styles */
+
+    .fab-btn {
+        right: calc(50% - 240px + 20px);
+        /* Center - half width + margin */
+    }
+}
+
+/* MODAL STYLES */
+/* MODAL STYLES (Consolidated from pedidos.css) */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    align-items: flex-end;
+    /* Mobile sheet style default */
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+/* Center on larger screens */
+@media (min-width: 481px) {
+    .modal-overlay {
+        align-items: center;
+    }
+}
+
+.modal-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-content {
+    background-color: white;
+    width: 100%;
+    max-width: 500px;
+    /* height controlled by content or max-height */
+    max-height: 90vh;
+    border-radius: 20px 20px 0 0;
+    padding: 0;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    overflow: hidden;
+}
+
+@media (min-width: 481px) {
+    .modal-content {
+        border-radius: 1rem;
+        width: 90%;
+        transform: translateY(20px);
+    }
+}
+
+.modal-overlay.open .modal-content {
+    transform: translateY(0);
+}
+
+.modal-header {
+    padding: 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-body {
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.btn-primary {
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-ghost {
+    background-color: transparent;
+    color: var(--text-secondary);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+}
+
+/* Department Card Enhancements */
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.bg-blue-50 {
+    background-color: #eff6ff;
+}
+
+.bg-green-500 {
+    background-color: #22c55e;
+}
+
+.bg-green-light {
+    background-color: #f0fdf4;
+}
+
+.bg-blue-light {
+    background-color: #eff6ff;
+}
+
+.action-btn-circle {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: none;
+    border-radius: 12px;
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+    font-weight: 600;
+    min-width: 100px;
+}
+
+.detail-field-box {
+    background-color: #f3f4f6;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 0.75rem;
+}
+
+.detail-field-box-gray {
+    background-color: #f3f4f6;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    border: 1px solid #e5e7eb;
+}
+
+.text-detail-xl {
+    font-size: 1.5rem;
+    line-height: 1.3;
+    color: #111827;
+}
+
+.action-btn-circle .material-icons-round {
+    font-size: 20px;
+}
+
+.text-detail-large {
+    font-size: 1.1rem;
+    line-height: 1.5;
+    color: #1f2937;
+}
+
+.label-detail {
+    font-size: 0.85rem;
+    color: #6b7280;
+    font-weight: 500;
+    margin-bottom: 0.1rem;
+    display: block;
+}
+
+.action-btn-circle:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+}
+
+.action-btn-circle .material-icons-round {
+    font-size: 28px;
+}
+
+.btn-primary-header {
+    background-color: white;
+    color: var(--primary-blue);
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.dept-card {
+    padding: 1.25rem 1.5rem !important;
+    margin-bottom: 0.5rem;
+}
+
+.dept-card h3 {
+    margin-bottom: 0.25rem;
+}
+
+/* RANKING BADGES */
+.rank-badge {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9999px;
+    /* full */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+.rank-1 {
+    background-color: #fef9c3 !important;
+    /* yellow-100 */
+    color: #a16207 !important;
+    /* yellow-700 */
+    border: 1px solid #fef08a !important;
+    /* yellow-200 */
+}
+
+.rank-2 {
+    background-color: #f3f4f6 !important;
+    /* gray-100 */
+    color: #374151 !important;
+    /* gray-700 */
+    border: 1px solid #e5e7eb !important;
+    /* gray-200 */
+}
+
+.rank-3 {
+    background-color: #ffedd5 !important;
+    /* orange-100 */
+    color: #9a3412 !important;
+    /* orange-800 */
+    border: 1px solid #fed7aa !important;
+    /* orange-200 */
+}
+
+.rank-default {
+    background-color: #f9fafb;
+    /* gray-50 */
+    color: #6b7280;
+    /* gray-500 */
+    border: 1px solid #f3f4f6;
+}
+
+.btn-primary-header:active {
+    transform: scale(0.95);
+    background-color: #f1f5f9;
+}

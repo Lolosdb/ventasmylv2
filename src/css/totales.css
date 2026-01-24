@@ -1,0 +1,132 @@
+/* Totales View Styles */
+
+.blue-gradient-card {
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    border-radius: 20px;
+    padding: 1.5rem;
+    color: white;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+.total-amount-display {
+    font-size: 3.5rem;
+    /* Big like screenshot */
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 2rem;
+}
+
+.objective-info {
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.9;
+    font-style: italic;
+}
+
+.progress-bg-dark {
+    background-color: rgba(255, 255, 255, 0.2);
+    height: 12px;
+    border-radius: 99px;
+    width: 100%;
+    position: relative;
+    margin-top: 0.5rem;
+}
+
+.progress-fill-light {
+    background-color: white;
+    height: 100%;
+    border-radius: 99px;
+    width: 0%;
+    /* Dynamic */
+}
+
+.chart-icon-box {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    right: 1.5rem;
+    top: 1.5rem;
+}
+
+.percent-badge {
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 0.875rem;
+    position: absolute;
+    right: 1.5rem;
+    bottom: 4rem;
+    /* Adjusted for layout */
+}
+
+/* Abstract decorations in blue card */
+.bg-decoration-line {
+    position: absolute;
+    right: -20px;
+    top: 50%;
+    opacity: 0.1;
+    font-size: 150px;
+    pointer-events: none;
+    transform: rotate(-15deg);
+}
+
+/* Community Grid */
+.communities-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.community-card {
+    background-color: white;
+    border-radius: 16px;
+    padding: 1rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.community-name {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+
+.community-amount {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-dark-blue);
+    margin-bottom: 0.25rem;
+}
+
+.community-orders {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* Clients Grid */
+.clients-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.client-stat-value {
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+.text-orange {
+    color: #f97316;
+}

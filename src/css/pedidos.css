@@ -1,0 +1,309 @@
+/* Pedidos View Styles */
+
+.pedidos-header-fixed {
+    background-color: #1e293b;
+    /* Dark header like screenshot */
+    color: white;
+    padding: 1rem;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    display: grid;
+    grid-template-columns: 40px 1fr 80px 80px;
+    /* N, Tienda, Importe, Fecha */
+    gap: 0.5rem;
+    position: sticky;
+    top: 0;
+    /* Below main header if necessary, but visually looks like it replaces sub-header */
+    z-index: 40;
+}
+
+.pedido-row {
+    display: grid;
+    grid-template-columns: 40px 1fr 80px 80px;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    align-items: center;
+    background-color: white;
+    font-size: 0.875rem;
+}
+
+.pedido-row:nth-child(even) {
+    background-color: #f8fafc;
+}
+
+/* Row Color States */
+.pedido-row.row-blue {
+    background-color: #dbeafe;
+    /* Light blue */
+}
+
+.pedido-row.row-blue .pedido-shop-name {
+    color: var(--primary-dark-blue);
+    font-weight: 700;
+}
+
+.pedido-row.row-green {
+    background-color: #dcfce7;
+    /* Light green */
+}
+
+.pedido-row.row-green .pedido-shop-name {
+    color: #15803d;
+    font-weight: 700;
+}
+
+.pedido-id {
+    font-weight: bold;
+    text-align: center;
+}
+
+.pedido-shop-name {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    color: #334155;
+}
+
+.pedido-amount {
+    text-align: right;
+    font-weight: 700;
+}
+
+.pedido-date {
+    text-align: right;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+/* Floating Action Button */
+.fab-btn {
+    position: fixed;
+    bottom: 80px;
+    /* Above bottom nav */
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    background-color: #2563eb;
+    /* Bright blue */
+    color: white;
+    border-radius: 20px;
+    /* Squircle */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-md);
+    border: none;
+    cursor: pointer;
+    z-index: 50;
+    font-size: 32px;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    display: flex;
+    align-items: flex-end;
+    /* Sheet style or center? Screenshot looks like full screen or large sheet */
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-content {
+    background-color: #f8fafc;
+    width: 100%;
+    max-width: 500px;
+    height: 95vh;
+    /* Almost full screen */
+    border-radius: 20px 20px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.open .modal-content {
+    transform: translateY(0);
+}
+
+.modal-header {
+    background-color: var(--primary-blue);
+    color: white;
+    padding: 1rem;
+    border-radius: 20px 20px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-body {
+    padding: 1.5rem;
+    /* Increased padding */
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Form Elements */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    background-color: white;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 2px var(--accent-purple-light);
+}
+
+.input-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Switch Toggle */
+.switch-container {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    border: 1px solid var(--border-color);
+}
+
+/* Simple CSS Switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #cbd5e1;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked+.slider {
+    background-color: var(--primary-blue);
+}
+
+input:checked+.slider:before {
+    transform: translateX(22px);
+}
+
+/* Modal Actions */
+.modal-actions {
+    padding: 1rem;
+    background-color: white;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 2rem;
+    /* Safe area */
+}
+
+.btn-ghost {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.btn-square-small {
+    width: 44px;
+    min-width: 44px;
+    background-color: #e0f2fe;
+    color: var(--primary-dark-blue);
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

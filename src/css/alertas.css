@@ -1,0 +1,58 @@
+/* Alertas View Styles */
+
+.alert-item {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 0.5rem;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.alert-item-content {
+    flex: 1;
+}
+
+.alert-client-name {
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.alert-days-info {
+    font-size: 0.8rem;
+    color: #15803d;
+    /* Default green text */
+    font-weight: 700;
+}
+
+.alert-days-info.red-text {
+    color: #ef4444;
+    /* Red text */
+}
+
+.alert-location {
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-left: 1rem;
+    flex-shrink: 0;
+}
+
+.dot-green {
+    background-color: #22c55e;
+    box-shadow: 0 0 0 4px #dcfce7;
+}
+
+.dot-red {
+    background-color: #ef4444;
+    box-shadow: 0 0 0 4px #fee2e2;
+}

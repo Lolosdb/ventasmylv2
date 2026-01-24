@@ -1,0 +1,88 @@
+/* Medias Mensuales Styles */
+
+.medias-container {
+    height: calc(100vh - 140px);
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem;
+    gap: 0.5rem;
+    overflow: hidden;
+    /* No scroll */
+}
+
+/* Grid for 12 months */
+.months-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 0.5rem;
+    /* Remove flex: 1 to stop it from forcing full height usage, 
+       allow card to take space or be centered */
+    flex: 0 1 auto;
+    height: 70%;
+    /* Occupy reasonable portion */
+}
+
+.month-card {
+    background-color: white;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f1f5f9;
+}
+
+.month-card-title {
+    font-size: 0.85rem;
+    /* Increased from 0.65rem */
+    font-weight: 800;
+    color: #3b82f6;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+
+.month-card-value {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+/* Bottom Annual Average Card */
+.annual-media-card {
+    background: linear-gradient(135deg, #1e293b 0%, #312e81 100%);
+    border-radius: 16px;
+    padding: 1rem;
+    position: relative;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    height: 100px;
+    /* Center in remaining space */
+    margin-top: auto;
+    margin-bottom: auto;
+}
+
+.annual-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    opacity: 0.9;
+    margin-bottom: 0.25rem;
+}
+
+.annual-value {
+    font-size: 2rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.annual-chart-deco {
+    position: absolute;
+    right: 1rem;
+    bottom: 0.5rem;
+    opacity: 0.2;
+}

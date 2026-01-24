@@ -1,0 +1,911 @@
+class DataManager {
+    constructor() {
+        this.db = new LocalDB();
+    }
+
+    async init() {
+        await this.db.init();
+        // Cargar objetivos por defecto si no existen
+        const goals = await this.db.get('config', 'goals');
+        if (!goals) {
+            await this.db.put('config', {
+                key: 'goals',
+                // Default detailed goals for 3%, 4%, 5%
+                data3: [10710, 38039, 57372, 40860, 52467, 58145, 77911, 74852, 44996, 43557, 17640, 12600],
+                data4: [11305, 40152, 60560, 43130, 55382, 61376, 82240, 79011, 47496, 45977, 18620, 13300],
+                data5: [11900, 42265, 63747, 45400, 58297, 64606, 86568, 83169, 49996, 48397, 19600, 14000]
+            });
+        }
+
+        // Auto-create current year if missing (e.g. first run on Jan 1st)
+        const currentYear = new Date().getFullYear();
+        await this.ensureYearExists(currentYear);
+    }
+
+    async ensureYearExists(year) {
+        let changed = false;
+
+        // 1. Sales History
+        let sales = await this.getSalesHistory();
+        if (!sales[year]) {
+            sales[year] = Array(12).fill(0);
+            await this.db.put('config', { key: 'sales_history', data: sales });
+            changed = true;
+        }
+
+        // 2. Invoice History
+        let invoice = await this.getInvoiceHistory();
+        if (!invoice[year]) {
+            invoice[year] = Array(12).fill(0);
+            await this.db.put('config', { key: 'invoice_history', data: invoice });
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    // --- GOALS (OBJETIVOS) ---
+    async getDetailedGoals() {
+        const stored = await this.db.get('config', 'goals');
+        if (stored && stored.data3) return stored;
+
+        // Fallback defaults if key missing or old structure
+        return {
+            data3: [10710, 38039, 57372, 40860, 52467, 58145, 77911, 74852, 44996, 43557, 17640, 12600],
+            data4: [11305, 40152, 60560, 43130, 55382, 61376, 82240, 79011, 47496, 45977, 18620, 13300],
+            data5: [11900, 42265, 63747, 45400, 58297, 64606, 86568, 83169, 49996, 48397, 19600, 14000]
+        };
+    }
+
+    async saveGoals(goalsData) {
+        // goalsData should look like { data3: [], data4: [], data5: [] }
+        await this.db.put('config', { key: 'goals', ...goalsData });
+    }
+
+    // --- DEPARTAMENTOS ---
+    async getDepartamentos() {
+        return await this.db.getAll('departments');
+    }
+
+    async saveDepartamento(dept) {
+        if (!dept.id) {
+            dept.id = Date.now().toString(); // Simple ID generation
+        }
+        await this.db.put('departments', dept);
+        return dept;
+    }
+
+    async deleteDepartamento(id) {
+        await this.db.delete('departments', id);
+    }
+
+    // --- CLIENTS ---
+    async getClients() {
+        return await this.db.getAll('clients');
+    }
+
+    async getClientByCode(code) {
+        // Ensure code is treated as string for lookup robustness
+        return await this.db.get('clients', String(code));
+    }
+
+    async importClientsFromExcel(input) {
+        return new Promise((resolve, reject) => {
+            const processData = async (data) => {
+                try {
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    let rawData = XLSX.utils.sheet_to_json(firstSheet);
+
+                    if (rawData.length > 0) {
+                        console.log("Columnas detectadas:", Object.keys(rawData[0]));
+                    }
+
+                    const getValue = (row, ...keys) => {
+                        for (let k of keys) {
+                            if (row[k] !== undefined) return row[k];
+                            const foundKey = Object.keys(row).find(rk => rk.trim().toUpperCase() === k.toUpperCase());
+                            if (foundKey) return row[foundKey];
+                        }
+                        return '';
+                    };
+
+                    const clients = rawData.map(row => ({
+                        // Trim code and remove leading quotes/accents if present
+                        code: String(getValue(row, 'CODIGO', 'CÓDIGO') || '').replace(/^['´]+/, '').trim(),
+                        name: getValue(row, 'TIENDA', 'NOMBRE', 'CLIENTE'),
+                        nif: getValue(row, 'NIF', 'DNI'),
+                        email: getValue(row, 'MAIL', 'EMAIL', 'CORREO'),
+                        address: getValue(row, 'DIRECCION', 'DIRECCIÓN'),
+                        contact: getValue(row, 'CONTACTO'),
+                        location: getValue(row, 'POBLACION', 'POBLACIÓN', 'CIUDAD'),
+                        province: getValue(row, 'PROVINCIA'),
+                        cp: getValue(row, 'CP', 'C.P.', 'CODIGO POSTAL', 'CÓDIGO POSTAL'),
+                        phone: String(getValue(row, 'TELEFONO', 'TELÉFONO', 'MOVIL') || '').replace(/^['´]+/, '').trim(),
+                        lat: getValue(row, 'LATITUD', 'LAT', 'LATITUDE'),
+                        lng: getValue(row, 'LONGITUD', 'LNG', 'LONG', 'LON', 'LONGITUDE'),
+                        createdAt: new Date().toISOString()
+                    })).filter(c => c.code && c.name);
+
+                    if (clients.length > 0) {
+                        await this.db.bulkPut('clients', clients);
+                        resolve({ success: true, count: clients.length });
+                    } else {
+                        const foundKeys = rawData.length > 0 ? Object.keys(rawData[0]).join(', ') : 'Ninguna';
+                        resolve({
+                            success: false,
+                            message: `No se encontraron clientes validos. Columnas detectadas: [${foundKeys}].`
+                        });
+                    }
+                } catch (error) {
+                    console.error("Error parsing Excel", error);
+                    reject(error);
+                }
+            };
+
+            if (input instanceof File) {
+                const reader = new FileReader();
+                reader.onload = (e) => processData(new Uint8Array(e.target.result));
+                reader.readAsArrayBuffer(input);
+            } else if (input instanceof Uint8Array || input instanceof ArrayBuffer) {
+                processData(new Uint8Array(input));
+            } else {
+                reject(new Error("Formato de entrada no soportado"));
+            }
+        });
+    }
+
+    async saveNewClientToDrive(url, filename, newClientData) {
+        try {
+            // 1. Download current file
+            const response = await fetch(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
+            const json = await response.json();
+
+            if (json.status !== 'success' || !json.data) {
+                throw new Error("No se pudo descargar el archivo actual de Drive.");
+            }
+
+            // 2. Parse Excel
+            const binaryString = atob(json.data);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+
+            const workbook = XLSX.read(bytes, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+
+            // 3. Convert to JSON with loose parsing to preserve all cols
+            let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+            // Prepare New Row using indexes A=0 to W=22
+            const newRow = [];
+            for (let i = 0; i <= 22; i++) newRow[i] = "";
+
+            newRow[0] = newClientData.code;      // A - CODIGO
+            newRow[1] = newClientData.name;      // B - TIENDA
+            newRow[2] = newClientData.nif;       // C - NIF
+            newRow[3] = newClientData.email;     // D - MAIL
+            newRow[4] = newClientData.address;   // E - DIRECCION
+            newRow[5] = newClientData.contact;   // F - CONTACTO
+            newRow[6] = newClientData.location;  // G - POBLACION
+            newRow[7] = newClientData.province;  // H - PROVINCIA
+            newRow[8] = newClientData.cp;        // I - C.P.
+
+            // Assuming J is index 9 based on typical Excel A=0 logic?
+            // A=0, B=1, C=2, D=3, E=4, F=5, G=6, H=7, I=8, J=9
+            newRow[9] = newClientData.phone;     // J - TELEFONO
+            newRow[10] = newClientData.schedule; // K - HORARIO
+
+            // V=21 (22nd letter), W=22 (23rd letter)
+            newRow[21] = newClientData.lat;      // V - LATITUD 
+            newRow[22] = newClientData.lng;      // W - LONGITUD
+
+            rows.push(newRow);
+
+            // 4. Sort by Population (Index 6)
+            const header = rows.shift(); // Remove header
+            rows.sort((a, b) => {
+                const valA = (a[6] || "").toString().toLowerCase();
+                const valB = (b[6] || "").toString().toLowerCase();
+                return valA.localeCompare(valB);
+            });
+            rows.unshift(header); // Put header back
+
+            // 5. Write back to Sheet
+            const newWorksheet = XLSX.utils.aoa_to_sheet(rows);
+            workbook.Sheets[firstSheetName] = newWorksheet;
+
+            const wbOut = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
+
+            // 6. Upload
+            const uploadRes = await fetch(url + '?action=save&filename=' + encodeURIComponent(filename), {
+                method: 'POST',
+                body: wbOut
+            });
+
+            const uploadJson = await uploadRes.json();
+            if (uploadJson.status === 'success') {
+                // Also save locally
+                await this.db.put('clients', {
+                    code: newClientData.code,
+                    name: newClientData.name,
+                    nif: newClientData.nif,
+                    email: newClientData.email,
+                    address: newClientData.address,
+                    contact: newClientData.contact,
+                    location: newClientData.location,
+                    province: newClientData.province,
+                    cp: newClientData.cp,
+                    phone: newClientData.phone,
+                    lat: newClientData.lat,
+                    lng: newClientData.lng,
+                    createdAt: new Date().toISOString()
+                });
+                return { success: true };
+            } else {
+                throw new Error(uploadJson.message || "Error al subir a Drive");
+            }
+
+        } catch (error) {
+            console.error("Save Error", error);
+            return { success: false, message: error.message };
+        }
+    }
+
+    async updateClientInDrive(url, filename, originalCode, updatedData) {
+        try {
+            // 1. Download
+            const response = await fetch(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
+            const json = await response.json();
+            if (json.status !== 'success' || !json.data) throw new Error("No se pudo descargar el archivo.");
+
+            // 2. Parse
+            const binaryString = atob(json.data);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+
+            const workbook = XLSX.read(bytes, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+            // 3. Find and Update
+            // Row 0 is header
+            let rowIndex = -1;
+            for (let i = 1; i < rows.length; i++) {
+                // Loose check for ID (string vs num)
+                if (String(rows[i][0]) === String(originalCode)) {
+                    rowIndex = i;
+                    break;
+                }
+            }
+
+            if (rowIndex === -1) throw new Error("Cliente no encontrado en el Excel.");
+
+            // Update row (index i)
+            const row = rows[rowIndex]; // Reference
+            // Ensure row is array
+            if (!Array.isArray(row)) rows[rowIndex] = [];
+
+            // Map fields same as saveNewClientToDrive
+            rows[rowIndex][0] = updatedData.code;      // A
+            rows[rowIndex][1] = updatedData.name;      // B
+            rows[rowIndex][2] = updatedData.nif;       // C
+            rows[rowIndex][3] = updatedData.email;     // D
+            rows[rowIndex][4] = updatedData.address;   // E
+            rows[rowIndex][5] = updatedData.contact;   // F
+            rows[rowIndex][6] = updatedData.location;  // G
+            rows[rowIndex][7] = updatedData.province;  // H
+            rows[rowIndex][8] = updatedData.cp;        // I
+            rows[rowIndex][9] = updatedData.phone;     // J
+            rows[rowIndex][10] = updatedData.schedule; // K
+
+            rows[rowIndex][21] = updatedData.lat;      // V
+            rows[rowIndex][22] = updatedData.lng;      // W
+
+            // 4. Sort
+            const header = rows.shift();
+            rows.sort((a, b) => {
+                const valA = (a[6] || "").toString().toLowerCase();
+                const valB = (b[6] || "").toString().toLowerCase();
+                return valA.localeCompare(valB);
+            });
+            rows.unshift(header);
+
+            // 5. Upload
+            const newWorksheet = XLSX.utils.aoa_to_sheet(rows);
+            workbook.Sheets[firstSheetName] = newWorksheet;
+            const wbOut = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
+
+            const uploadRes = await fetch(url + '?action=save&filename=' + encodeURIComponent(filename), {
+                method: 'POST',
+                body: wbOut
+            });
+            const uploadJson = await uploadRes.json();
+
+            if (uploadJson.status === 'success') {
+                // Update Local
+                // Delete old key if code changed? IndexedDB put overwrites if key same.
+                // If code changed, we need to delete old key.
+                if (String(originalCode) !== String(updatedData.code)) {
+                    await this.db.delete('clients', originalCode);
+                }
+
+                await this.db.put('clients', {
+                    code: updatedData.code,
+                    name: updatedData.name,
+                    nif: updatedData.nif,
+                    email: updatedData.email,
+                    address: updatedData.address,
+                    contact: updatedData.contact,
+                    location: updatedData.location,
+                    province: updatedData.province,
+                    cp: updatedData.cp,
+                    phone: updatedData.phone,
+                    lat: updatedData.lat,
+                    lng: updatedData.lng,
+                    createdAt: new Date().toISOString()
+                });
+                return { success: true };
+            } else {
+                throw new Error(uploadJson.message || "Error al actualizar en Drive");
+            }
+
+        } catch (e) {
+            console.error(e);
+            return { success: false, message: e.message };
+        }
+    }
+
+    async deleteClientFromDrive(url, filename, clientCode) {
+        try {
+            // 1. Download
+            const response = await fetch(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
+            const json = await response.json();
+            if (json.status !== 'success' || !json.data) throw new Error("No se pudo descargar el archivo.");
+
+            // 2. Parse
+            const binaryString = atob(json.data);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+
+            const workbook = XLSX.read(bytes, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+            // 3. Filter
+            const header = rows.shift();
+            const initialLen = rows.length;
+
+            rows = rows.filter(r => String(r[0]) !== String(clientCode));
+
+            if (rows.length === initialLen) throw new Error("Cliente no encontrado para eliminar.");
+
+            rows.unshift(header);
+
+            // 4. Upload
+            const newWorksheet = XLSX.utils.aoa_to_sheet(rows);
+            workbook.Sheets[firstSheetName] = newWorksheet;
+            const wbOut = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
+
+            const uploadRes = await fetch(url + '?action=save&filename=' + encodeURIComponent(filename), {
+                method: 'POST',
+                body: wbOut
+            });
+            const uploadJson = await uploadRes.json();
+
+            if (uploadJson.status === 'success') {
+                // Local delete
+                await this.db.delete('clients', clientCode);
+                return { success: true };
+            } else {
+                throw new Error(uploadJson.message || "Error al eliminar de Drive");
+            }
+
+        } catch (e) {
+            console.error(e);
+            return { success: false, message: e.message };
+        }
+    }
+
+    async importFromDrive(url, filename) {
+        try {
+            const response = await fetch(`${url}?action=get&filename=${encodeURIComponent(filename)}`);
+            const json = await response.json();
+
+            if (json.status === 'success' && json.data) {
+                const binaryString = atob(json.data);
+                const len = binaryString.length;
+                const bytes = new Uint8Array(len);
+                for (let i = 0; i < len; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                return await this.importClientsFromExcel(bytes);
+            } else {
+                throw new Error(json.message || 'Error desconocido al descargar de Drive');
+            }
+        } catch (error) {
+            console.error("Error en importFromDrive", error);
+            // Return object with success:false so UI handles it gracefully
+            return { success: false, message: error.message };
+        }
+    }
+
+    // --- ORDERS (PEDIDOS) ---
+    async getOrders() {
+        const orders = await this.db.getAll('orders');
+        // Ordenar por fecha descendente
+        return orders.sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO));
+    }
+
+    async createOrder(orderData) {
+        // orderData: { clientCode, shopName, amount, dateString (DD/MM/YYYY), ... }
+
+        // Create Order 
+        // orderData.date comes from <input type="date"> which is YYYY-MM-DD
+        // We need to store it as is for dateISO, or parse if needed.
+        // Previously we split by '/' assuming Spanish format, but input date gives '2026-01-20'.
+
+        // If it comes from Excel import it might be different, but from Modal is YYYY-MM-DD.
+        let dateISO = orderData.date;
+
+        // If it happens to be DD/MM/YYYY
+        if (dateISO.includes('/') && !dateISO.includes('-')) {
+            const [day, month, year] = dateISO.split('/');
+            dateISO = `${year}-${month}-${day}`;
+        }
+
+        // No need to redeclare 'dateISO' if we use 'orderData.dateISO' equivalent inside newOrder
+        // But 'orderData' has 'date'. Let's ensure consistency.
+
+        const newOrder = {
+            ...orderData,
+            dateISO,
+            createdAt: new Date().toISOString()
+        };
+
+        return await this.db.put('orders', newOrder);
+    }
+
+    async deleteOrder(id) {
+        // ID must be string matching key
+        return await this.db.delete('orders', String(id));
+    }
+
+    async getOrderById(id) {
+        const orders = await this.getOrders();
+        // ID is string in DB usually.
+        return orders.find(o => String(o.id) === String(id));
+    }
+
+    // --- DASHBOARD STATS ---
+    async getDashStats() {
+        const orders = await this.getOrders();
+        const clients = await this.getClients();
+
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        // Ventas del mes
+        const ordersThisMonth = orders.filter(o => {
+            const d = new Date(o.dateISO);
+            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+        });
+
+        // Filtrar solo pedidos con importe > 0 para la estadística de pedidos y media
+        const ordersThisMonthValued = ordersThisMonth.filter(o => (parseFloat(o.amount) || 0) > 0);
+
+        const totalVentasMes = ordersThisMonth.reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
+
+        // Clientes activos (AÑO en curso)
+        // Se cuentan los clientes únicos que han hecho al menos 1 pedido este AÑO.
+        const activeClientsSet = new Set();
+        orders.forEach(o => {
+            const d = new Date(o.dateISO || o.date);
+            if (d.getFullYear() === currentYear) {
+                // Prioritize code, fallback to shop name
+                activeClientsSet.add(o.clientCode || o.shop);
+            }
+        });
+
+        // Top Clientes (Global o Mes? Asumiremos Mes por ahora para el Dash)
+        const clientSales = {};
+        ordersThisMonth.forEach(o => {
+            if (!clientSales[o.shop]) clientSales[o.shop] = 0;
+            clientSales[o.shop] += parseFloat(o.amount);
+        });
+
+        const topClientes = Object.entries(clientSales)
+            .map(([name, amount]) => ({ name, amount, rank: 0 }))
+            .sort((a, b) => b.amount - a.amount)
+            .slice(0, 5)
+            .map((item, index) => ({ ...item, rank: index + 1 }));
+
+        // Objetivos (Dinamizados)
+        const goals = await this.getDetailedGoals();
+        const monthIdx = new Date().getMonth();
+
+        let targetAmount = goals.data3[monthIdx];
+        if (totalVentasMes >= goals.data4[monthIdx]) {
+            targetAmount = goals.data5[monthIdx];
+        } else if (totalVentasMes >= goals.data3[monthIdx]) {
+            targetAmount = goals.data4[monthIdx];
+        }
+
+        // 6-Month Trend Logic
+        const tendencia = [];
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthIdx = d.getMonth();
+            const yearInfo = d.getFullYear();
+            const monthLabel = d.toLocaleString('es-ES', { month: 'short' }).toUpperCase().replace('.', '');
+
+            const sum = orders.reduce((acc, o) => {
+                const oDate = new Date(o.dateISO || o.date);
+                if (oDate.getMonth() === monthIdx && oDate.getFullYear() === yearInfo) {
+                    return acc + (parseFloat(o.amount) || 0);
+                }
+                return acc;
+            }, 0);
+            tendencia.push({ mes: monthLabel, ventas: sum });
+        }
+
+        return {
+            ventasMes: {
+                total: totalVentasMes,
+                objetivo: targetAmount,
+                porcentaje: ((totalVentasMes / targetAmount) * 100).toFixed(1)
+            },
+            stats: {
+                clientesActivos: activeClientsSet.size,
+                pedidosMes: ordersThisMonthValued.length
+            },
+            topClientes,
+            tendencia
+        };
+    }
+    // --- YEARLY RANKING ---
+    async getYearlyRanking() {
+        const orders = await this.getOrders();
+        const currentYear = new Date().getFullYear();
+
+        // 1. Filter orders for current year
+        const yearlyOrders = orders.filter(o => {
+            const d = new Date(o.dateISO || o.date);
+            return d.getFullYear() === currentYear;
+        });
+
+        // 2. Aggregate sales by client
+        const clientSales = {};
+        yearlyOrders.forEach(o => {
+            const key = o.shop;
+            if (!clientSales[key]) clientSales[key] = 0;
+            clientSales[key] += parseFloat(o.amount) || 0;
+        });
+
+        // 3. Convert to array and sort
+        const ranking = Object.entries(clientSales)
+            .map(([name, amount]) => ({ name, amount }))
+            .sort((a, b) => b.amount - a.amount)
+            .map((item, index) => ({ ...item, rank: index + 1 }));
+
+        return ranking;
+    }
+
+    // --- SALES HISTORY (FACTURACION) ---
+    async getSalesHistory() {
+        // Stored in config as 'sales_history'
+        const stored = await this.db.get('config', 'sales_history');
+        if (stored && stored.data) return stored.data;
+
+        // Default Data (Preserving historical data provided)
+        return {
+            "2023": [20207, 48128, 67578, 29569, 51373, 72568, 73656, 77855, 49961, 26468, 18464, 3036],
+            "2024": [27667, 53783, 42963, 43800, 64598, 70680, 83019, 82068, 58964, 43046, 22965, 6994],
+            "2025": [18099, 57630, 56677, 38101, 58432, 69221, 84573, 80152, 46201, 54948, 20138, 4717],
+            "2026": Array(12).fill(0)
+        };
+    }
+
+    async saveSalesHistory(year, monthIndex, value) {
+        let history = await this.getSalesHistory();
+        if (!history[year]) history[year] = Array(12).fill(0);
+
+        history[year][monthIndex] = parseFloat(value) || 0;
+
+        await this.db.put('config', { key: 'sales_history', data: history });
+        return history;
+    }
+
+    // --- INVOICE HISTORY (FACTURA REAL) ---
+    async getInvoiceHistory() {
+        const stored = await this.db.get('config', 'invoice_history');
+        if (stored && stored.data) return stored.data;
+
+        // Default Data for Factura (Start empty or with defaults)
+        return {
+            "2023": [20207, 48128, 67578, 29569, 51373, 72568, 73656, 77855, 49961, 26468, 18464, 3036],
+            "2024": [27667, 53783, 42963, 43800, 64598, 70680, 83019, 82068, 58964, 43046, 22965, 6994],
+            "2025": [18099, 57630, 56677, 38101, 58432, 69221, 84573, 80152, 46201, 54948, 20138, 4717],
+            "2026": Array(12).fill(0)
+        };
+    }
+
+    async saveInvoiceHistory(year, monthIndex, value) {
+        let history = await this.getInvoiceHistory();
+        if (!history[year]) history[year] = Array(12).fill(0);
+
+        history[year][monthIndex] = parseFloat(value) || 0;
+
+        await this.db.put('config', { key: 'invoice_history', data: history });
+        return history;
+    }
+
+    async exportFullBackup() {
+        // Collect all data
+        const clients = await this.db.getAll('clients');
+        const orders = await this.db.getAll('orders');
+        const departments = await this.db.getAll('departments');
+
+        // Config: we just get the specific keys we know of. 
+        const goals = await this.db.get('config', 'goals');
+        const history = await this.db.get('config', 'sales_history');
+        const invoiceHistory = await this.db.get('config', 'invoice_history'); // Added
+
+        // We can create a config object
+        const config = {
+            goals: goals && goals.key ? { targets: goals.targets } : undefined,
+        };
+
+        const backupData = {
+            timestamp: new Date().toISOString(),
+            appVersion: '1.0',
+            clients,
+            orders,
+            departments,
+            config,
+            sales_history: history ? history.data : undefined,
+            invoice_history: invoiceHistory ? invoiceHistory.data : undefined // Added
+        };
+
+        return backupData;
+    }
+
+    async restoreFullBackup(data) {
+        // data structure expected: { clients: [], orders: [], config: {}, sales_history: {}, departments: [] }
+        // or a similar structure exported by the App.
+
+        console.log("Restoring backup...", data);
+
+        if (!data) throw new Error("No data received");
+
+        // 1. Clear existing data
+        await this.db.clearStore('clients');
+        await this.db.clearStore('orders');
+        await this.db.clearStore('departments'); // Added
+        // We might want to be selective with config, but for full restore, clearing specific keys is safer?
+        // Let's overwrite specific keys instead of clearing 'config' entirely if there are other settings.
+
+        // 2. Restore Clients
+        if (data.clients && Array.isArray(data.clients)) {
+            await this.db.bulkPut('clients', data.clients);
+        }
+
+        // 3. Restore Orders
+        if (data.orders && Array.isArray(data.orders)) {
+            await this.db.bulkPut('orders', data.orders);
+        }
+
+        // 3.1 Restore Departments
+        if (data.departments && Array.isArray(data.departments)) {
+            await this.db.bulkPut('departments', data.departments);
+        }
+
+        // 4. Restore Config (Goals, Sales History)
+        if (data.config) {
+            // If config is an array (from getAll) or object? 
+            // Usually export is an object representation.
+            // Let's assume data.config contains keys: 'goals', 'sales_history'
+
+            if (data.config.goals) {
+                await this.db.put('config', { key: 'goals', ...data.config.goals });
+                // Note: if data.config.goals was just the value object, we ensure key is there.
+                // Actually, if we export getAll('config'), we get [{key:'goals', ...}, {key:'sales_history', ...}]
+            }
+
+            // Handle if data.config is the raw array from export
+            if (Array.isArray(data.config)) {
+                for (const item of data.config) {
+                    await this.db.put('config', item);
+                }
+            }
+        }
+
+        // Special case for sales_history if it's separate in the backup JSON structure
+        if (data.sales_history) {
+            await this.db.put('config', { key: 'sales_history', data: data.sales_history });
+        }
+
+        // Special case for invoice_history
+        if (data.invoice_history) {
+            await this.db.put('config', { key: 'invoice_history', data: data.invoice_history });
+        }
+
+        return { success: true };
+    }
+    // --- EXCEL BACKUP (LOCAL) ---
+    async exportBackupToExcel() {
+        try {
+            const wb = XLSX.utils.book_new();
+
+            // 1. Clients Sheet
+            const clients = await this.getClients();
+            if (clients && clients.length > 0) {
+                const wsClients = XLSX.utils.json_to_sheet(clients);
+                XLSX.utils.book_append_sheet(wb, wsClients, "Clientes");
+            }
+
+            // 2. Orders Sheet
+            const orders = await this.getOrders();
+            if (orders && orders.length > 0) {
+                const wsOrders = XLSX.utils.json_to_sheet(orders);
+                XLSX.utils.book_append_sheet(wb, wsOrders, "Pedidos");
+            }
+
+            // 2.1 Departments Sheet
+            const departments = await this.getDepartamentos();
+            if (departments && departments.length > 0) {
+                const wsDepts = XLSX.utils.json_to_sheet(departments);
+                XLSX.utils.book_append_sheet(wb, wsDepts, "Departamentos");
+            }
+
+            // 3. Goal & History (Config)
+            // Flatten config into a key-value pair sheet or JSON string
+            const goals = await this.db.get('config', 'goals');
+            const salesHistory = await this.db.get('config', 'sales_history');
+            const invoiceHistory = await this.db.get('config', 'invoice_history'); // Also export Invoice History
+
+            const configData = [
+                { key: 'goals', value: JSON.stringify(goals || {}) },
+                { key: 'sales_history', value: JSON.stringify(salesHistory || {}) },
+                { key: 'invoice_history', value: JSON.stringify(invoiceHistory || {}) }
+            ];
+            const wsConfig = XLSX.utils.json_to_sheet(configData);
+            XLSX.utils.book_append_sheet(wb, wsConfig, "Config");
+
+            // Save File
+            XLSX.writeFile(wb, `Backup_Ventas_${new Date().toISOString().slice(0, 10)}.xlsx`);
+            return { success: true };
+
+        } catch (error) {
+            console.error("Export Error", error);
+            return { success: false, message: error.message };
+        }
+    }
+
+    async importBackupFromExcel(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const wb = XLSX.read(data, { type: 'array' });
+
+                    // 1. Restore Clients
+                    if (wb.SheetNames.includes("Clientes")) {
+                        const ws = wb.Sheets["Clientes"];
+                        const clients = XLSX.utils.sheet_to_json(ws);
+                        if (clients.length > 0) {
+                            await this.db.clearStore('clients');
+                            await this.db.bulkPut('clients', clients);
+                        }
+                    }
+
+                    // 2. Restore Orders
+                    if (wb.SheetNames.includes("Pedidos")) {
+                        const ws = wb.Sheets["Pedidos"];
+                        const orders = XLSX.utils.sheet_to_json(ws);
+                        if (orders.length > 0) {
+                            await this.db.clearStore('orders');
+                            await this.db.bulkPut('orders', orders);
+                        }
+                    }
+
+                    // 2.1 Restore Departments
+                    if (wb.SheetNames.includes("Departamentos")) {
+                        const ws = wb.Sheets["Departamentos"];
+                        const departments = XLSX.utils.sheet_to_json(ws);
+                        if (departments.length > 0) {
+                            await this.db.clearStore('departments');
+                            await this.db.bulkPut('departments', departments);
+                        }
+                    }
+
+                    // 3. Restore Config
+                    if (wb.SheetNames.includes("Config")) {
+                        const ws = wb.Sheets["Config"];
+                        const configRows = XLSX.utils.sheet_to_json(ws);
+
+                        for (const row of configRows) {
+                            if (row.key && row.value) {
+                                try {
+                                    const parsedVal = JSON.parse(row.value);
+                                    // Special handling for keys that need 'key' property wrapper in DB if stored that way
+                                    // In init(), we do: db.put('config', { key: 'goals', ...goalsData })
+                                    // Here parsedVal is likely { key: 'goals', data3: ... } if we stringified the whole object.
+                                    // Let's check if parsedVal has the key property or if we need to add it.
+
+                                    if (row.key === 'goals' || row.key === 'sales_history' || row.key === 'invoice_history') {
+                                        // Reuse the key from the row to ensure consistency
+                                        // If parsedVal already has 'key', good. If not (unlikely if we exported standard way), we might need to add it.
+                                        // Actually in export we did: value: JSON.stringify(goals)
+                                        // 'goals' object from db.get('config', 'goals') ALREADY has { key: 'goals', ...rest }
+                                        // so JSON.parse(row.value) returns the full object with key.
+                                        await this.db.put('config', parsedVal);
+                                    }
+
+                                } catch (err) {
+                                    console.warn("Error parsing config", row.key, err);
+                                }
+                            }
+                        }
+                    }
+
+                    resolve({ success: true });
+
+                } catch (error) {
+                    console.error("Import Error", error);
+                    resolve({ success: false, message: error.message });
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    }
+    async forceSyncOrders(url) {
+        try {
+            const orders = await this.getOrders();
+            if (!orders || orders.length === 0) {
+                return { success: false, message: "No hay pedidos para sincronizar." };
+            }
+
+            // Create Workbook
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(orders);
+            XLSX.utils.book_append_sheet(wb, ws, "Pedidos");
+
+            // Write to base64
+            const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+
+            // Upload
+            // We use 'Pedidos.xlsx' as the standard filename for orders
+            const filename = 'Pedidos.xlsx';
+            const uploadUrl = `${url}?action=save&filename=${encodeURIComponent(filename)}`;
+
+            const response = await fetch(uploadUrl, {
+                method: 'POST',
+                body: wbOut
+            });
+
+            const json = await response.json();
+
+            if (json.status === 'success') {
+                return { success: true, count: orders.length };
+            } else {
+                throw new Error(json.message || "Error en el script de Google");
+            }
+
+        } catch (error) {
+            console.error("Force Sync Error", error);
+            return { success: false, message: error.message };
+        }
+    }
+}
+// End DataManager
+
+// Global Instance
+const dataManager = new DataManager();

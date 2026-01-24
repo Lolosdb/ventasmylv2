@@ -1,0 +1,251 @@
+/* Clientes View Styles */
+
+/* Import Container */
+.import-card {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.import-btn {
+    background-color: #f1f5f9;
+    color: var(--text-primary);
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    margin-top: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+/* Search Bar */
+.search-container {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.search-input {
+    width: 100%;
+    padding: 1rem 3rem;
+    /* Left (icon) and Right (clear btn) padding */
+    border: 1px solid white;
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    font-size: 1rem;
+    background-color: white;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+}
+
+.clear-icon {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 20px;
+}
+
+.clear-icon:hover {
+    color: #ef4444;
+    /* Red on hover */
+}
+
+/* Client Card List */
+.client-card {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.client-code-badge {
+    background-color: #f1f5f9;
+    color: var(--text-secondary);
+    font-weight: bold;
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+.client-card-title {
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.tag-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.tag-location {
+    background-color: #dbeafe;
+    color: var(--primary-dark-blue);
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    text-transform: uppercase;
+}
+
+.tag-contact {
+    background-color: #dcfce7;
+    color: #15803d;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    text-transform: uppercase;
+}
+
+/* Modal Detalle Cliente */
+.client-detail-header {
+    background-color: #2563eb;
+    /* Stronger blue */
+    color: white;
+    padding: 1.5rem;
+    border-radius: 20px 20px 0 0;
+    position: relative;
+}
+
+.client-detail-code {
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    display: inline-block;
+    margin-top: 0.5rem;
+}
+
+.info-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: flex-start;
+}
+
+.info-icon-box {
+    width: 40px;
+    height: 40px;
+    background-color: #f1f5f9;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.info-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 700;
+    margin-bottom: 0.2rem;
+}
+
+.info-value {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.whatsapp-btn {
+    background-color: #dcfce7;
+    color: #15803d;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+}
+
+/* Historial Pedidos */
+.history-section-title {
+    font-weight: 800;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.history-item {
+    background-color: white;
+    border: 1px solid var(--border-color);
+    padding: 1rem;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.status-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 99px;
+    text-transform: uppercase;
+}
+
+.status-pendiente {
+    background-color: #dbeafe;
+    /* Blue, match screenshot layout for "Pendiente" button at bottom right implies it might be blue? Or wait screenshot shows "PENDIENTE" badge in gray? Let's check screenshot 2 */
+    /* Screenshot 2 shows "PENDIENTE" badge in light blue/gray at bottom right of history item? No, looks like a button. Ah "19-01-2026, 607 €, PENDIENTE badge" */
+}
+
+.status-badge-blue {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.close-modal-btn-large {
+    width: 100%;
+    background-color: #1e293b;
+    color: white;
+    padding: 1rem;
+    border-radius: 12px;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    margin-top: 1rem;
+}
