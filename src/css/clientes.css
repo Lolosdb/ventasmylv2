@@ -141,16 +141,97 @@
     padding: 1.5rem;
     border-radius: 20px 20px 0 0;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    transition: all 0.3s ease;
+}
+
+.header-top-row {
+    padding-right: 2.5rem;
+    /* Space for the absolute close button */
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    /* Allow wrapping for very long names */
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: flex-end;
+    /* Align to the right */
+    flex-wrap: wrap;
+}
+
+.header-action-btn {
+    background-color: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: white;
+    padding: 8px 14px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-action-btn:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+.header-action-btn:active {
+    transform: scale(0.95);
+}
+
+.header-action-btn.btn-delete {
+    background-color: rgba(239, 68, 68, 0.8);
+    /* Stronger red tint */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.header-action-btn.btn-delete:hover {
+    background-color: rgba(239, 68, 68, 0.6);
+}
+
+.header-action-btn.btn-close {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    /* Match header padding */
+    background-color: rgba(255, 255, 255, 0.15);
+    padding: 8px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-action-btn.btn-close:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+.header-action-btn .material-icons-round {
+    font-size: 20px;
 }
 
 .client-detail-code {
     background-color: rgba(255, 255, 255, 0.2);
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: bold;
-    display: inline-block;
-    margin-top: 0.5rem;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .info-row {

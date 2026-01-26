@@ -2,46 +2,46 @@
 
 #map-container {
     height: calc(100vh - 140px);
-    /* Adjust based on header + nav height */
     width: 100%;
     z-index: 1;
 }
 
+/* Leyenda del mapa - Arriba Izquierda */
 .map-legend-card {
     position: absolute;
-    top: 80px;
-    /* Below header */
-    left: 1rem;
-    background-color: white;
-    padding: 1rem;
+    top: 75px;
+    /* Bajada para dejar sitio al buscador */
+    left: 12px;
+    background-color: rgba(255, 255, 255, 0.95);
+    padding: 0.6rem;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 1000;
-    /* Above map */
-    min-width: 150px;
+    min-width: 130px;
+    border: 1px solid #e2e8f0;
 }
 
 .legend-title {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 700;
     color: var(--text-secondary);
     text-transform: uppercase;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.4rem;
 }
 
 .legend-item {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 0.25rem;
-    font-size: 0.8rem;
+    margin-bottom: 0.2rem;
+    font-size: 0.75rem;
     font-weight: 600;
     color: var(--text-primary);
 }
 
 .legend-dot {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
 }
 
@@ -51,4 +51,139 @@
 
 .legend-green {
     background-color: #22c55e;
+}
+
+/* Buscador de Localidad */
+.map-search-container {
+    position: absolute;
+    top: 15px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    z-index: 1001;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+}
+
+.map-search-container input {
+    flex: 1;
+    border: none;
+    padding: 12px 15px;
+    font-size: 0.9rem;
+    outline: none;
+    color: var(--text-primary);
+}
+
+.map-search-container button {
+    background: white;
+    border: none;
+    padding: 0 15px;
+    color: #009ee3;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-left: 1px solid #f1f5f9;
+}
+
+.map-search-container button:active {
+    background-color: #f8fafc;
+}
+
+/* Botón de ubicación - Bajado y Alineado con Zoom */
+.btn-location-map {
+    position: absolute;
+    bottom: 24px;
+    left: 15px;
+    width: 60px;
+    height: 60px;
+    background-color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    cursor: pointer;
+    border: 3px solid #009ee3;
+    color: #009ee3;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    padding: 0;
+    outline: none;
+}
+
+.btn-location-map:active {
+    transform: scale(0.9);
+    background-color: #f0f0f0;
+}
+
+.btn-location-map .material-icons-round {
+    font-size: 32px;
+}
+
+/* Controles de zoom Leaflet */
+.leaflet-bottom.leaflet-right {
+    bottom: 10px !important;
+    right: 15px !important;
+}
+
+.leaflet-control-zoom {
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+    margin: 0 !important;
+}
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+    width: 44px !important;
+    height: 44px !important;
+    line-height: 44px !important;
+    font-size: 24px !important;
+    color: #333 !important;
+    background: white !important;
+}
+
+.leaflet-control-zoom-in {
+    border-bottom: 1px solid #eee !important;
+    border-top-left-radius: 8px !important;
+    border-top-right-radius: 8px !important;
+}
+
+.leaflet-control-zoom-out {
+    border-bottom-left-radius: 8px !important;
+    border-bottom-right-radius: 8px !important;
+}
+
+/* Ajustes para popups */
+.leaflet-popup-content-wrapper {
+    border-radius: 12px;
+    padding: 2px;
+}
+
+.leaflet-popup-content {
+    margin: 10px 12px;
+    line-height: 1.3;
+}
+
+.leaflet-control-attribution {
+    background: rgba(255, 255, 255, 0.7) !important;
+    font-size: 9px !important;
+    margin: 0 !important;
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }

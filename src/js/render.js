@@ -1201,15 +1201,28 @@ async function openClientDetailModal(clientCode) {
 
     modalContent.innerHTML = `
         <div class="client-detail-header">
-            <div class="flex justify-between items-start">
-                 <h2 class="text-xl font-bold overflow-hidden" style="max-width: 70%;">${clientData.name}</h2>
-                 <div class="flex gap-2">
-                     <button class="icon-btn" onclick="openNewClientModal('${clientData.code}')"><span class="material-icons-round text-white">edit</span></button>
-                     <button class="icon-btn" onclick="handleDeleteClient('${clientData.code}')"><span class="material-icons-round text-white">delete</span></button>
-                     <button class="icon-btn" onclick="closeClientDetailModal()"><span class="material-icons-round text-white">close</span></button>
-                 </div>
+            <!-- Absolute Close Button -->
+            <button class="header-action-btn btn-close" onclick="closeClientDetailModal()" title="Cerrar">
+                <span class="material-icons-round">close</span>
+            </button>
+
+            <!-- Row 1: Name and Code -->
+            <div class="header-top-row">
+                 <h2 class="text-xl font-bold">${clientData.name}</h2>
+                 <span class="client-detail-code">${clientData.code}</span>
             </div>
-            <span class="client-detail-code">${clientData.code}</span>
+
+            <!-- Row 2: Actions -->
+            <div class="header-actions">
+                <button class="header-action-btn" onclick="openNewClientModal('${clientData.code}')">
+                    <span class="material-icons-round">edit</span>
+                    <span>Editar</span>
+                </button>
+                <button class="header-action-btn btn-delete" onclick="handleDeleteClient('${clientData.code}')">
+                    <span class="material-icons-round">delete</span>
+                    <span>Eliminar</span>
+                </button>
+            </div>
         </div>
 
         <div class="modal-body">
@@ -1809,8 +1822,26 @@ function renderMapa() {
         </div>
     `;
 
+    // Search Bar
+    contentHtml += `
+        <div class="map-search-container">
+            <input type="text" id="mapSearchInput" placeholder="Buscar localidad o dirección..." 
+                   onkeydown="if(event.key==='Enter') window.searchLocation()">
+            <button onclick="window.searchLocation()" title="Buscar">
+                <span class="material-icons-round">search</span>
+            </button>
+        </div>
+    `;
+
     // Map Container
     contentHtml += `<div id="map-container"></div>`;
+
+    // Location Button
+    contentHtml += `
+        <button class="btn-location-map" onclick="window.centerMapOnUser()" title="Centrar en mi ubicación">
+            <span class="material-icons-round">my_location</span>
+        </button>
+    `;
 
     contentHtml += `</main>`;
     contentHtml += renderBottomNav('mapa');
@@ -1947,7 +1978,9 @@ async function initLeafletMap() {
     // Default center (Asturias roughly)
     const centerLat = 43.36;
     const centerLng = -5.85;
-    const map = L.map('map-container').setView([centerLat, centerLng], 9);
+    const map = L.map('map-container', { zoomControl: false }).setView([centerLat, centerLng], 9);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    window.currentLeafletMap = map; // Store for external access
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -1996,7 +2029,8 @@ async function initLeafletMap() {
         validClients.forEach(client => {
             const lat = parseCoord(client.lat);
             const lng = parseCoord(client.lng);
-            const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+            // Key using 5 decimals (~1.1m precision) to group very close clients
+            const key = `${lat.toFixed(5)},${lng.toFixed(5)}`;
             if (!grouped.has(key)) grouped.set(key, []);
             grouped.get(key).push(client);
         });
@@ -2012,7 +2046,7 @@ async function initLeafletMap() {
                 // If overlap, spread in circle
                 if (group.length > 1) {
                     const angle = (index / group.length) * Math.PI * 2;
-                    const offset = 0.00015; // Approx 15m radius
+                    const offset = 0.0002; // Reduced offset slightly (~20m)
                     finalLat = baseLat + Math.cos(angle) * offset;
                     finalLng = baseLng + Math.sin(angle) * offset;
                 }
@@ -2034,10 +2068,10 @@ async function initLeafletMap() {
 
                 L.circleMarker([finalLat, finalLng], {
                     color: 'white',
-                    weight: 1,
+                    weight: 1.5,
                     fillColor: color,
                     fillOpacity: 1,
-                    radius: 7 // Slightly larger for better touch target
+                    radius: 8 // Size adjusted (was 10, too big; originally 7)
                 }).addTo(map)
                     .bindPopup(`
                       <div class="text-center">
@@ -2066,7 +2100,7 @@ async function initLeafletMap() {
                     weight: 3,
                     fillColor: '#f59e0b', // Amber/Orange for high visibility
                     fillOpacity: 1,
-                    radius: 10
+                    radius: 10 // Size adjusted (was 12)
                 }).addTo(map)
                     .bindPopup('<b>Mi Ubicación</b>');
 
@@ -2080,6 +2114,64 @@ async function initLeafletMap() {
         );
     }
 }
+
+window.searchLocation = async function () {
+    const query = document.getElementById('mapSearchInput').value.trim();
+    if (!query) return;
+
+    const btn = document.querySelector('.map-search-container button');
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<span class="material-icons-round animate-spin">sync</span>';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+        const data = await response.json();
+
+        if (data && data.length > 0) {
+            const result = data[0];
+            const lat = parseFloat(result.lat);
+            const lon = parseFloat(result.lon);
+
+            if (window.currentLeafletMap) {
+                window.currentLeafletMap.flyTo([lat, lon], 14);
+            }
+        } else {
+            alert('No se ha encontrado la ubicación: ' + query);
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Error al buscar la localidad.');
+    } finally {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+    }
+};
+
+window.centerMapOnUser = function () {
+    if (!navigator.geolocation) {
+        alert("La geolocalización no está soportada por tu navegador.");
+        return;
+    }
+
+    const btn = document.querySelector('.btn-location-map');
+    if (btn) btn.style.opacity = '0.5';
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const { latitude, longitude } = position.coords;
+            if (window.currentLeafletMap) {
+                window.currentLeafletMap.flyTo([latitude, longitude], 15);
+            }
+            if (btn) btn.style.opacity = '1';
+        },
+        (error) => {
+            alert("Error al obtener ubicación: " + error.message);
+            if (btn) btn.style.opacity = '1';
+        },
+        { enableHighAccuracy: true }
+    );
+};
 
 // Make functions global
 window.renderDash = renderDash;
