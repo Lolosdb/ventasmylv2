@@ -655,11 +655,11 @@ class DataManager {
         // Config: we just get the specific keys we know of. 
         const goals = await this.db.get('config', 'goals');
         const history = await this.db.get('config', 'sales_history');
-        const invoiceHistory = await this.db.get('config', 'invoice_history'); // Added
+        const invoiceHistory = await this.db.get('config', 'invoice_history');
 
         // We can create a config object
         const config = {
-            goals: goals && goals.key ? { targets: goals.targets } : undefined,
+            goals: goals // include full goals object (data3, data4, data5)
         };
 
         const backupData = {
@@ -684,25 +684,21 @@ class DataManager {
 
         if (!data) throw new Error("No data received");
 
-        // 1. Clear existing data
-        await this.db.clearStore('clients');
-        await this.db.clearStore('orders');
-        await this.db.clearStore('departments'); // Added
-        // We might want to be selective with config, but for full restore, clearing specific keys is safer?
-        // Let's overwrite specific keys instead of clearing 'config' entirely if there are other settings.
-
-        // 2. Restore Clients
-        if (data.clients && Array.isArray(data.clients)) {
+        // 1. Clear and Restore Clients
+        if (data.clients && Array.isArray(data.clients) && data.clients.length > 0) {
+            await this.db.clearStore('clients');
             await this.db.bulkPut('clients', data.clients);
         }
 
-        // 3. Restore Orders
-        if (data.orders && Array.isArray(data.orders)) {
+        // 2. Clear and Restore Orders
+        if (data.orders && Array.isArray(data.orders) && data.orders.length > 0) {
+            await this.db.clearStore('orders');
             await this.db.bulkPut('orders', data.orders);
         }
 
-        // 3.1 Restore Departments
-        if (data.departments && Array.isArray(data.departments)) {
+        // 3. Clear and Restore Departments
+        if (data.departments && Array.isArray(data.departments) && data.departments.length > 0) {
+            await this.db.clearStore('departments');
             await this.db.bulkPut('departments', data.departments);
         }
 

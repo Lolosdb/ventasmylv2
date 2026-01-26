@@ -80,12 +80,15 @@
 .map-search-container button {
     background: white;
     border: none;
-    padding: 0 15px;
+    padding: 0 12px;
     color: #009ee3;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.map-search-container button:not(#clearMapSearch) {
     border-left: 1px solid #f1f5f9;
 }
 

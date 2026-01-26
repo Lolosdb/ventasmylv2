@@ -1826,7 +1826,11 @@ function renderMapa() {
     contentHtml += `
         <div class="map-search-container">
             <input type="text" id="mapSearchInput" placeholder="Buscar localidad o dirección..." 
+                   oninput="window.toggleClearSearch()"
                    onkeydown="if(event.key==='Enter') window.searchLocation()">
+            <button id="clearMapSearch" onclick="window.clearMapSearch()" title="Limpiar" style="display: none; border: none; background: transparent; padding: 0 8px; color: #94a3b8;">
+                <span class="material-icons-round" style="font-size: 20px;">cancel</span>
+            </button>
             <button onclick="window.searchLocation()" title="Buscar">
                 <span class="material-icons-round">search</span>
             </button>
@@ -2115,6 +2119,24 @@ async function initLeafletMap() {
     }
 }
 
+// --- MAP SEARCH LOGIC ---
+window.toggleClearSearch = function () {
+    const input = document.getElementById('mapSearchInput');
+    const clearBtn = document.getElementById('clearMapSearch');
+    if (input && clearBtn) {
+        clearBtn.style.display = input.value.trim() ? 'flex' : 'none';
+    }
+};
+
+window.clearMapSearch = function () {
+    const input = document.getElementById('mapSearchInput');
+    if (input) {
+        input.value = '';
+        input.focus();
+        window.toggleClearSearch();
+    }
+};
+
 window.searchLocation = async function () {
     const query = document.getElementById('mapSearchInput').value.trim();
     if (!query) return;
@@ -2145,6 +2167,14 @@ window.searchLocation = async function () {
     } finally {
         btn.innerHTML = originalContent;
         btn.disabled = false;
+    }
+
+    // Clear field after search and hide keyboard
+    const finalInput = document.getElementById('mapSearchInput');
+    if (finalInput) {
+        finalInput.value = '';
+        finalInput.blur(); // Hide mobile keyboard
+        window.toggleClearSearch();
     }
 };
 
@@ -2974,7 +3004,7 @@ async function openBackupsModal() {
                             </button>
                             <button class="btn-restore flex items-center gap-2 px-4 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors" 
                                     style="border: none; height: 40px; display: flex; align-items: center;"
-                                    onclick="event.stopPropagation(); restoreBackup('${file.id}')">
+                                    onclick="event.stopPropagation(); restoreBackup('${file.id}', '${file.name}')">
                                  <span class="material-icons-round" style="font-size: 18px;">download</span>
                                  Restaurar
                             </button>
@@ -2995,17 +3025,25 @@ async function openBackupsModal() {
     }
 }
 
-async function restoreBackup(fileId) {
-    if (!confirm('¿Estás SEGURO de que quieres restaurar esta copia? \nSE BORRARÁN LOS DATOS ACTUALES y se reemplazarán por los de la copia.')) {
+async function restoreBackup(fileId, fileName = '') {
+    const isExcel = fileName.toLowerCase().endsWith('.xlsx');
+
+    let confirmMsg = '¿Estás SEGURO de que quieres restaurar esta copia? \nSE BORRARÁN LOS DATOS ACTUALES y se reemplazarán por los de la copia.';
+    if (isExcel) {
+        confirmMsg = 'Has seleccionado un archivo Excel de clientes. \nEsto ACTUALIZARÁ tus clientes actuales pero MANTENDRÁ tus pedidos y otros datos. \n\n¿Quieres continuar?';
+    }
+
+    if (!confirm(confirmMsg)) {
         return;
     }
 
     const urlInput = document.querySelector('.script-url-input');
     const scriptUrl = urlInput ? urlInput.value.trim() : '';
 
-    // Show loading indicator (maybe simpler handling for now)
-    const originalText = document.querySelector('.modal-header h2').textContent;
-    document.querySelector('.modal-header h2').textContent = 'Restaurando...';
+    // Show loading indicator
+    const originalHeader = document.querySelector('.modal-header h2');
+    const originalHeaderText = originalHeader.textContent;
+    originalHeader.textContent = isExcel ? 'Importando Clientes...' : 'Restaurando...';
 
     try {
         const fetchUrl = `${scriptUrl}?action=get&id=${fileId}`;
@@ -3013,36 +3051,48 @@ async function restoreBackup(fileId) {
         const result = await response.json();
 
         if (result.status === 'success' && result.data) {
-            // result.data is the JSON string Content of the file
-            // We need to parse it if it comes as string, or use as object if auto-parsed.
-            // Google script usually returns JSON. If the file content IS json, it might be nested in data.
+            if (isExcel) {
+                // For Excel, result.data is the base64 string
+                const binaryString = atob(result.data);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
 
-            let backupData = result.data;
-            if (typeof backupData === 'string') {
-                try {
-                    backupData = JSON.parse(backupData);
-                } catch (e) {
-                    // Maybe it's already object
-                    console.warn("Could not parse data as string, assuming object", e);
+                const importRes = await dataManager.importClientsFromExcel(bytes);
+                if (importRes.success) {
+                    alert(`Éxito: Se han actualizado ${importRes.count} clientes.`);
+                } else {
+                    alert('Error en la importación: ' + importRes.message);
                 }
+            } else {
+                // For JSON
+                let backupData = result.data;
+                if (typeof backupData === 'string') {
+                    try {
+                        backupData = JSON.parse(backupData);
+                    } catch (e) {
+                        console.warn("Could not parse data as string, assuming object", e);
+                    }
+                }
+                await dataManager.restoreFullBackup(backupData);
+                alert('Restauración completada con éxito.');
             }
 
-            await dataManager.restoreFullBackup(backupData);
-
-            alert('Restauración completada con éxito.');
-            location.reload(); // Reload to refresh all views with new data
+            // Close modal and refresh view
+            closeBackupsModal();
+            if (typeof renderAjustes === 'function') renderAjustes();
 
         } else {
-            alert('Error al descargar copia: ' + (result.message || 'Error desconocido'));
+            alert('Error al obtener el archivo: ' + (result.message || 'Sin mensaje'));
         }
 
     } catch (error) {
         console.error(error);
-        alert('Error de conexión al restaurar: ' + error.message);
+        alert('Error durante la restauración: ' + error.message);
     } finally {
-        document.querySelector('.modal-header h2').textContent = originalText;
+        if (originalHeader) originalHeader.textContent = originalHeaderText;
     }
 }
+
 
 async function deleteBackup(fileId) {
     if (!confirm('¿Seguro que quieres ELIMINAR esta copia de seguridad?')) {
