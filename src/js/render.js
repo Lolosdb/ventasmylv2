@@ -2878,12 +2878,8 @@ async function renderAjustes() {
 
                 <div class="flex flex-col gap-2">
                     <p class="text-xs font-bold text-gray uppercase">AÑOS CONFIGURADOS:</p>
-                    <div class="flex gap-2 flex-wrap">
-                        <span class="year-chip">2023</span>
-                        <span class="year-chip">2024</span>
-                        <span class="year-chip">2025</span>
-                        <span class="year-chip">2026</span>
-                        <span class="year-chip">${new Date().getFullYear()}</span>
+                    <div class="flex gap-2 flex-wrap" id="yearChipsContainer">
+                        ${Object.keys(await dataManager.getSalesHistory()).sort().map(y => `<span class="year-chip">${y}</span>`).join('')}
                     </div>
                 </div>
             </div>
@@ -3380,6 +3376,25 @@ window.startBackupScheduler = function () {
 
 window.checkAutoBackup = async function () {
     const now = new Date();
+
+    // --- LÓGICA RESUMEN ANUAL (26 de Diciembre) ---
+    const dayOfMonth = now.getDate();
+    const month = now.getMonth(); // 0-11 (11 = Diciembre)
+    const currentYear = now.getFullYear();
+
+    // Si es 26 de diciembre (o posterior hasta fin de año)
+    if (month === 11 && dayOfMonth >= 26) {
+        const resumenKey = `resumen_${currentYear}_enviado`;
+        if (!localStorage.getItem(resumenKey)) {
+            console.log(`[AnnualSummary] Iniciando generación automática del resumen ${currentYear}...`);
+            const res = await dataManager.generateAnnualSummaryToDrive(currentYear);
+            if (res.success) {
+                localStorage.setItem(resumenKey, 'true');
+                console.log(`[AnnualSummary] Resumen ${currentYear} enviado correctamente a Drive.`);
+            }
+        }
+    }
+
     const day = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
 
     // Config: Lunes (1) a Viernes (5)
@@ -3616,6 +3631,31 @@ async function forceSyncAll() {
 }
 
 window.forceSyncAll = forceSyncAll;
+
+// --- YEAR MANAGEMENT ---
+async function handleAddNextYear() {
+    try {
+        const history = await dataManager.getSalesHistory();
+        const years = Object.keys(history).map(Number).sort((a, b) => a - b);
+        const lastYear = years[years.length - 1];
+        const nextYear = lastYear + 1;
+
+        if (confirm(`¿Añadir el año ${nextYear} a la configuración?`)) {
+            const changed = await dataManager.ensureYearExists(nextYear);
+            if (changed) {
+                alert(`Año ${nextYear} añadido correctamente.`);
+                if (typeof renderAjustes === 'function') renderAjustes();
+            } else {
+                alert(`El año ${nextYear} ya está configurado.`);
+            }
+        }
+    } catch (error) {
+        console.error("Error adding next year:", error);
+        alert("Error al añadir año: " + error.message);
+    }
+}
+window.handleAddNextYear = handleAddNextYear;
+
 // --- INFO MODAL ---
 
 function openInfoModal() {

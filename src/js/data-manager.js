@@ -19,7 +19,9 @@ class DataManager {
 
         // Auto-create current year if missing (e.g. first run on Jan 1st)
         const currentYear = new Date().getFullYear();
-        await this.ensureYearExists(currentYear);
+        const created = await this.ensureYearExists(currentYear);
+
+        return { created, year: currentYear };
     }
 
     async ensureYearExists(year) {
@@ -128,6 +130,7 @@ class DataManager {
                     })).filter(c => c.code && c.name);
 
                     if (clients.length > 0) {
+                        await this.db.clearStore('clients');
                         await this.db.bulkPut('clients', clients);
                         resolve({ success: true, count: clients.length });
                     } else {
@@ -570,14 +573,13 @@ class DataManager {
         };
     }
     // --- YEARLY RANKING ---
-    async getYearlyRanking() {
+    async getYearlyRanking(year = new Date().getFullYear()) {
         const orders = await this.getOrders();
-        const currentYear = new Date().getFullYear();
 
-        // 1. Filter orders for current year
+        // 1. Filter orders for specified year
         const yearlyOrders = orders.filter(o => {
             const d = new Date(o.dateISO || o.date);
-            return d.getFullYear() === currentYear;
+            return d.getFullYear() === year;
         });
 
         // 2. Aggregate sales by client
@@ -862,41 +864,148 @@ class DataManager {
             reader.readAsArrayBuffer(file);
         });
     }
-    async forceSyncOrders(url) {
+    async generateAnnualSummaryToDrive(year) {
         try {
-            const orders = await this.getOrders();
-            if (!orders || orders.length === 0) {
-                return { success: false, message: "No hay pedidos para sincronizar." };
-            }
-
-            // Create Workbook
+            console.log(`Generando resumen anual ${year} para Drive...`);
             const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(orders);
-            XLSX.utils.book_append_sheet(wb, ws, "Pedidos");
 
-            // Write to base64
+            // --- HOJA 1: PEDIDOS ---
+            const allOrders = await this.getOrders();
+            const clients = await this.getClients();
+            const clientMap = new Map(clients.map(c => [c.name, c]));
+
+            const currentYearOrders = allOrders.filter(o => {
+                const d = new Date(o.dateISO || o.date);
+                return d.getFullYear() === year;
+            }).sort((a, b) => {
+                const numA = a.displayId || parseInt(String(a.id).split('-').pop());
+                const numB = b.displayId || parseInt(String(b.id).split('-').pop());
+                return numA - numB;
+            });
+
+            const ordersSheetData = currentYearOrders.map(o => {
+                const client = clientMap.get(o.shop) || {};
+                return {
+                    "Nº Pedido": o.displayId || String(o.id).split('-').pop(),
+                    "Fecha": o.dateISO || o.date,
+                    "Cliente": o.shop,
+                    "Importe": o.amount,
+                    "Población": client.location || "---",
+                    "Provincia": client.province || "---",
+                    "Nuevo Cliente?": o.persistedIsNewClient ? "SI" : "NO",
+                    "Comentarios": o.comments || ""
+                };
+            });
+
+            const wsOrders = XLSX.utils.json_to_sheet(ordersSheetData);
+            XLSX.utils.book_append_sheet(wb, wsOrders, "Pedidos");
+
+            // --- HOJA 2: RESUMEN POR PROVINCIA Y TOTALES ---
+            const PROVINCES_TO_SHOW = ['ASTURIAS', 'CANTABRIA', 'LEÓN', 'GALICIA'];
+            const statsByProv = {};
+            PROVINCES_TO_SHOW.forEach(p => statsByProv[p] = { Provincia: p, "Ventas Totales": 0, "Nº Pedidos": 0, "Ticket Medio": 0 });
+
+            let totalVentasYear = 0;
+            currentYearOrders.forEach(o => {
+                totalVentasYear += (parseFloat(o.amount) || 0);
+                const client = clientMap.get(o.shop);
+                if (client && client.province) {
+                    let prov = client.province.trim().toUpperCase();
+                    if (prov === 'LEON') prov = 'LEÓN';
+                    if (prov === 'LUGO') prov = 'GALICIA';
+                    if (prov === 'PALENCIA') prov = 'LEÓN';
+
+                    if (statsByProv[prov]) {
+                        statsByProv[prov]["Ventas Totales"] += (parseFloat(o.amount) || 0);
+                        statsByProv[prov]["Nº Pedidos"] += 1;
+                    }
+                }
+            });
+
+            PROVINCES_TO_SHOW.forEach(p => {
+                if (statsByProv[p]["Nº Pedidos"] > 0) {
+                    statsByProv[p]["Ticket Medio"] = statsByProv[p]["Ventas Totales"] / statsByProv[p]["Nº Pedidos"];
+                }
+            });
+
+            const resumenData = Object.values(statsByProv);
+            // Añadir fila de totales generales
+            resumenData.push({ Provincia: "TOTAL GENERAL", "Ventas Totales": totalVentasYear, "Nº Pedidos": currentYearOrders.length, "Ticket Medio": totalVentasYear / currentYearOrders.length });
+
+            // Clientes nuevos en el año
+            const newClientsCount = currentYearOrders.filter(o => o.persistedIsNewClient).length;
+            resumenData.push({});
+            resumenData.push({ Provincia: "Clientes Nuevos en el Año", "Ventas Totales": newClientsCount });
+
+            const wsResumen = XLSX.utils.json_to_sheet(resumenData);
+            XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen Provincias");
+
+            // --- HOJA 3: RANKING CLIENTES ---
+            const ranking = await this.getYearlyRanking(year);
+            const rankingRows = ranking.map(r => ({
+                "Puesto": r.rank,
+                "Cliente": r.name,
+                "Importe Total": r.amount
+            }));
+            const wsRanking = XLSX.utils.json_to_sheet(rankingRows);
+            XLSX.utils.book_append_sheet(wb, wsRanking, "Ranking Clientes");
+
+            // --- HOJA 4: VISTA FACTURA (HISTÓRICO) ---
+            const invoiceHistory = await this.getInvoiceHistory();
+            const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            const facturaYears = Object.keys(invoiceHistory).sort();
+
+            const facturaRows = months.map((m, mIdx) => {
+                const row = { "MES": m };
+                facturaYears.forEach(y => {
+                    row[y] = invoiceHistory[y][mIdx] || 0;
+                });
+                return row;
+            });
+            const wsFactura = XLSX.utils.json_to_sheet(facturaRows);
+            XLSX.utils.book_append_sheet(wb, wsFactura, "Vista Factura");
+
+            // --- HOJA 5: VISTA VENTAS (HISTÓRICO) ---
+            const salesHistory = await this.getSalesHistory();
+            const salesYears = Object.keys(salesHistory).sort();
+
+            const salesRows = months.map((m, mIdx) => {
+                const row = { "MES": m };
+                salesYears.forEach(y => {
+                    row[y] = salesHistory[y][mIdx] || 0;
+                });
+                return row;
+            });
+            const wsSales = XLSX.utils.json_to_sheet(salesRows);
+            XLSX.utils.book_append_sheet(wb, wsSales, "Vista Ventas");
+
+            // --- ENVIO A DRIVE ---
             const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+            const filename = `Resumen_${year}.xlsx`;
 
-            // Upload
-            // We use 'Pedidos.xlsx' as the standard filename for orders
-            const filename = 'Pedidos.xlsx';
-            const uploadUrl = `${url}?action=save&filename=${encodeURIComponent(filename)}`;
+            // Usar la URL constante que está en render.js o definirla aquí si es necesario
+            // Como estamos en DataManager, es mejor pasarla o usar la que tengamos guardada en config
+            const scriptUrl = typeof GOOGLE_SCRIPT_URL !== 'undefined' ? GOOGLE_SCRIPT_URL :
+                (window.GOOGLE_SCRIPT_URL || "");
 
+            if (!scriptUrl) throw new Error("URL de Google Drive no configurada.");
+
+            const uploadUrl = `${scriptUrl}?action=save&filename=${encodeURIComponent(filename)}`;
             const response = await fetch(uploadUrl, {
                 method: 'POST',
                 body: wbOut
             });
 
             const json = await response.json();
-
             if (json.status === 'success') {
-                return { success: true, count: orders.length };
+                console.log(`Resumen ${year} guardado con éxito en Drive.`);
+                return { success: true, filename };
             } else {
-                throw new Error(json.message || "Error en el script de Google");
+                throw new Error(json.message || "Error al subir resumen a Drive");
             }
 
         } catch (error) {
-            console.error("Force Sync Error", error);
+            console.error("Error generating annual summary:", error);
             return { success: false, message: error.message };
         }
     }
