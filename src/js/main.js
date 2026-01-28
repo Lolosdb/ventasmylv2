@@ -30,13 +30,15 @@ async function initApp() {
                 localStorage.setItem(mensajeVistoKey, 'true');
             }
         }
+        // Start Backup Scheduler
+        if (window.startBackupScheduler) {
+            window.startBackupScheduler();
+        }
+
     } catch (e) {
         console.error('Error inicializando DB:', e);
-    }
-
-    // Start Backup Scheduler
-    if (window.startBackupScheduler) {
-        window.startBackupScheduler();
+        document.getElementById('app').innerHTML = `<div style="color:red; padding:2rem;">Error crítico: ${e.message || 'No se pudo conectar a la base de datosLocal'}</div>`;
+        return; // Don't proceed to render Dash or Start Scheduler
     }
 
     // Por defecto cargar el Dashboard

@@ -703,10 +703,9 @@ class DataManager {
 
         // Config: we just get the specific keys we know of. 
         const goals = await this.db.get('config', 'goals');
-        const history = await this.db.get('config', 'sales_history');
-        const invoiceHistory = await this.db.get('config', 'invoice_history');
+        const history = await this.getSalesHistory(); // Use the method with fallback defaults
+        const invoiceHistory = await this.getInvoiceHistory(); // Use the method with fallback defaults
 
-        // We can create a config object
         const config = {
             goals: goals // include full goals object (data3, data4, data5)
         };
@@ -718,8 +717,8 @@ class DataManager {
             orders,
             departments,
             config,
-            sales_history: history ? history.data : undefined,
-            invoice_history: invoiceHistory ? invoiceHistory.data : undefined // Added
+            sales_history: history,
+            invoice_history: invoiceHistory
         };
 
         return backupData;

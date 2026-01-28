@@ -3455,14 +3455,19 @@ async function initiateDriveBackup(silent = false) {
     }
 
     if (silent) {
-        // Optional: Show a non-intrusive toast or console log
-        // If we had a toast system: showToast("Iniciando copia automática...", "info");
         console.log("Iniciando copia de seguridad automática...");
     }
 
     try {
         console.log("Exporting data...");
         const data = await dataManager.exportFullBackup();
+
+        // Control de SEGURIDAD: Evitar backups vacíos
+        const isEmpty = (!data.clients || data.clients.length === 0) && (!data.orders || data.orders.length === 0);
+        if (isEmpty && silent) {
+            console.warn("[AutoBackup] Se ha cancelado la copia automática porque no se detectan clientes ni pedidos (posible error de carga)");
+            return false;
+        }
 
         console.log("Sending to Drive...", scriptUrl);
 
