@@ -624,6 +624,53 @@ class DataManager {
         return history;
     }
 
+    async checkAndAutoFillSales() {
+        const now = new Date();
+        const d = now.getDate();
+        const m = now.getMonth(); // 0-11
+        const y = now.getFullYear();
+
+        let targetMonth = -1;
+        let targetYear = y;
+
+        // Lógica de disparo:
+        // 1. A partir del 23 de diciembre -> Rellenar Diciembre (m=11)
+        if (m === 11 && d >= 23) {
+            targetMonth = 11;
+        }
+        // 2. A partir del día 1 de cada mes (Feb-Dic) -> Rellenar mes anterior
+        else if (d >= 1 && m > 0) {
+            targetMonth = m - 1;
+        }
+        // Nota: Enero no dispara nada porque Diciembre se hizo el 23 Dic.
+
+        if (targetMonth === -1) return;
+
+        // Comprobar si ya se hizo para este mes/año
+        const autofillKey = `autofill_done_${targetYear}_${targetMonth}`;
+        const alreadyDone = await this.db.get('config', autofillKey);
+        if (alreadyDone) return;
+
+        console.log(`[AutoFill] Detectado gatillo para ${targetMonth + 1}/${targetYear}. Calculando pedidos...`);
+
+        // Calcular suma de pedidos del mes objetivo
+        const orders = await this.getOrders();
+        const totalAmount = orders.reduce((sum, o) => {
+            const oDate = new Date(o.dateISO || o.date);
+            if (oDate.getFullYear() === targetYear && oDate.getMonth() === targetMonth) {
+                return sum + (parseFloat(o.amount) || 0);
+            }
+            return sum;
+        }, 0);
+
+        // Guardar en el historial de ventas
+        await this.saveSalesHistory(targetYear, targetMonth, totalAmount);
+
+        // Marcar como completado
+        await this.db.put('config', { key: autofillKey, done: true, timestamp: now.toISOString(), amount: totalAmount });
+        console.log(`[AutoFill] Completado: ${totalAmount}€ para el mes ${targetMonth + 1}`);
+    }
+
     // --- INVOICE HISTORY (FACTURA REAL) ---
     async getInvoiceHistory() {
         const stored = await this.db.get('config', 'invoice_history');

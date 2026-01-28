@@ -3745,23 +3745,20 @@ function openInfoModal() {
 
                 <section class="mb-6">
                     <h3 class="font-bold text-orange-600 border-b pb-1 mb-3 flex items-center gap-2">
-                        <span class="material-icons-round" style="font-size: 20px;">event_repeat</span> Ciclo de Año Nuevo (Transición)
+                        <span class="material-icons-round" style="font-size: 20px;">event_repeat</span> Automatismos y Ciclos
                     </h3>
-                    <p class="text-sm mb-3">
-                        La aplicación está diseñada para ser autónoma. Cada <strong>1 de enero a las 00:00</strong>:
-                    </p>
                     <div class="text-sm flex flex-col gap-3 ml-2">
                         <div class="flex items-start gap-2">
                             <span class="material-icons-round text-orange-400" style="font-size: 18px;">auto_awesome</span>
-                            <span><strong>Reset inteligente:</strong> Las vistas de Alertas y Mapa se reinician para mostrar el estado real del nuevo año (todos los clientes pasan a azul).</span>
+                            <span><strong>Rellenado Automático:</strong> El día 1 de cada mes (y el 23 de diciembre), la app calcula y rellena automáticamente el campo de ventas del mes anterior sumando tus pedidos.</span>
                         </div>
                         <div class="flex items-start gap-2">
-                            <span class="material-icons-round text-orange-400" style="font-size: 18px;">storage</span>
-                            <span><strong>Inicialización:</strong> Se crean automáticamente las estructuras de datos para las nuevas tablas de ventas y facturación de ese año.</span>
+                            <span class="material-icons-round text-orange-400" style="font-size: 18px;">description</span>
+                            <span><strong>Resumen Anual Excel:</strong> Cada 26 de diciembre se genera automáticamente un archivo Excel completo en tu Google Drive con el resumen de todo el año.</span>
                         </div>
                         <div class="flex items-start gap-2">
-                            <span class="material-icons-round text-orange-400" style="font-size: 18px;">history</span>
-                            <span><strong>Histórico:</strong> Todos tus datos de años anteriores permanecen seguros y consultables en las vistas correspondientes.</span>
+                            <span class="material-icons-round text-orange-400" style="font-size: 18px;">calendar_today</span>
+                            <span><strong>Año Nuevo:</strong> El 1 de enero la app se prepara para el nuevo ciclo, creando las tablas correspondientes y reiniciando el mapa y alertas para el nuevo periodo.</span>
                         </div>
                     </div>
                 </section>

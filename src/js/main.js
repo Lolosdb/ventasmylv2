@@ -11,6 +11,9 @@ async function initApp() {
         const initResult = await dataManager.init();
         console.log('LocalDB inicializada correctament');
 
+        // --- RELLENADO AUTOMÁTICO DE VENTAS ---
+        await dataManager.checkAndAutoFillSales();
+
         // --- AVISO AÑO NUEVO ---
         if (initResult && initResult.created) {
             alert(`Año ${initResult.year} creado`);
